@@ -15,4 +15,12 @@ A comprehensive tool for working with pixel structure and hidden image data:
 
 **Perceptual Hashing (pHash):** Analyze image structure, generate persistent hashes, and calculate Hamming distance to find visual duplicates and traces of editing.
 
-### 2. `sys://shell` — ?
+
+### 2. `px://hook` — session intercept, security diagnostics
+A specialized environment for capturing traffic, debugging web requests, and testing client-side application security:
+
+**Request Interception & Modification:** Real-time monitoring, capturing, and restructuring of request/response data, headers, payloads, and cookies on the fly.
+
+**DOM & XSS Vector Testing:** An isolated sandbox for evaluating structural payload mutations, analyzing DOM injection vectors, and auditing client-side security mechanisms.
+
+**Anomaly & Signature Detection:** Analysis of code structures and network traffic to identify non-standard patterns, broken packet signatures, and structural anomalies.
