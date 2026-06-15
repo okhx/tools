@@ -2,6 +2,8 @@
 
 ---
 
+# `❤️ Made with love`
+
 ## 🛠 Modules, functions
 
 ### 1. `img://tools` — analyze, graphics protection
