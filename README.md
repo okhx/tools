@@ -2,7 +2,7 @@
 
 ---
 
-# `❤️ Made with love`
+## `❤️ Made with love`
 
 ## 🛠 Modules, functions
 
