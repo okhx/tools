@@ -121,6 +121,15 @@ header{
   position: relative;
 }
 
+.panel-b{
+  border:1px solid var(--line);
+  padding:24px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(26, 24, 10, 0.75);
+  border-color: rgba(254, 240, 138, 0.25);
+}
+
 .section-title{
   font-size:11px; letter-spacing:.14em; text-transform:uppercase; 
   background: var(--fg); color: var(--bg); padding: 5px 10px;
@@ -272,44 +281,7 @@ footer{ margin-top:40px; padding-top:18px; border-top:1px solid var(--line); tex
 
   <main>
     
-    <div class="grid">
-      
-      <div class="panel">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/></svg>
-          img://tools
-        </div>
-        <p class="hint" 
-           data-ru="Комплексная утилита для цифровой криминалистики и приватности изображений. Включает парсер EXIF-метаданных, LSB-стеганографию с визуализатором младших битов, перцептивный хэш (pHash) для детекции изменений, анализ структурных контуров и модуль маскировки Anti-AI Cloak." 
-           data-en="Advanced suite for digital image forensics and privacy. Includes an EXIF metadata parser, LSB steganography with a bit-slicing visualizer, perceptual hashing (pHash) for tamper detection, structural edge analysis, and an Anti-AI noise cloak.">
-          Комплексная утилита для цифровой криминалистики и приватности изображений. Включает парсер EXIF-метаданных, LSB-стеганографию с визуализатором младших битов, перцептивный хэш (pHash) для детекции изменений, анализ структурных контуров и модуль маскировки Anti-AI Cloak.
-        </p>
-        
-        <a href="img.html" class="icon-btn">
-          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          <span data-ru="Перейти" data-en="Launch Program">Перейти</span>
-        </a>
-      </div>
-
-      <div class="panel">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          px://hook (W.I.P)
-        </div>
-        <p class="hint" 
-           data-ru="Модуль находится в стадии проектирования. Планируется добавление инструментов детекции аномалий в кодовой структуре, анализа сигнатур сетевых пакетов и песочницы для безопасного разбора манипуляций с DOM/XSS-векторами." 
-           data-en="The module is currently under design. Planned features include anomaly detection in code structures, network packet signature analysis, and a sandbox environment for safe analysis of DOM/XSS vectors.">
-          Модуль находится в стадии проектирования. Планируется добавление инструментов детекции аномалий в кодовой структуре, анализа сигнатур сетевых пакетов и песочницы для безопасного разбора манипуляций с DOM/XSS-векторами.
-        </p>
-        <a href="hook.html" class="icon-btn">
-          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          <span data-ru="Перейти" data-en="Launch Program">Перейти</span>
-        </a>
-      </div>
-
-    </div>
-
-    <div class="panel" style="padding: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;">
+    <div class="panel" style="padding: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; margin-bottom: 32px;">
       <div class="section-title" style="margin-bottom: 8px;">
         <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         identity_node
@@ -334,11 +306,11 @@ footer{ margin-top:40px; padding-top:18px; border-top:1px solid var(--line); tex
           <div class="terminal-output" id="output-target">
             <div class="output-row">
               <span class="output-key">[identity]:</span>
-              <span class="output-val" data-ru="независимый разработчик / цифровой энтузиаст" data-en="independent developer / digital enthusiast">независимый разработчик / цифровой энтузиаст</span>
+              <span class="output-val" data-ru="независимый разработчик / цифровой энтузиаст" data-en="independent developer / just enthusiast">независимый разработчик / просто энтузиаст</span>
             </div>
             <div class="output-row">
               <span class="output-key">[stack]:</span>
-              <span class="output-val">html, css, javascript, swiftui, c(50/50), security architecture</span>
+              <span class="output-val">html, css, javascript, swiftui, c(badly), security architecture</span>
             </div>
             <div class="output-row">
               <span class="output-key">[focus]:</span>
@@ -351,6 +323,47 @@ footer{ margin-top:40px; padding-top:18px; border-top:1px solid var(--line); tex
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="grid">
+      
+      <div class="panel-b">
+        <span style="position: absolute; top: 24px; right: 24px; font-size: 16px; color: #fef08a; opacity: 0.85; transform: rotate(15deg); user-select: none;">⭐</span>
+        
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          px://hook [BETA]
+        </div> <br>
+          Burp in your pocket
+        <p class="hint" 
+           data-ru="Модуль находится в стадии проектирования. Планируется добавление инструментов детекции аномалий в кодовой структуре, анализа сигнатур сетевых пакетов и песочницы для безопасного разбора манипуляций с DOM/XSS-векторами." 
+           data-en="The module is currently under design. Planned features include anomaly detection in code structures, network packet signature analysis, and a sandbox environment for safe analysis of DOM/XSS vectors.">
+          Модуль находится в стадии проектирования. Планируется добавление инструментов детекции аномалий в кодовой структуре, анализа сигнатур сетевых пакетов и песочницы для безопасного разбора манипуляций с DOM/XSS-векторами.
+        </p>
+        <a href="hook.html" class="icon-btn">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span data-ru="Перейти" data-en="Launch Program">Перейти</span>
+        </a>
+      </div>
+
+      <div class="panel">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+          img://tools
+        </div> <br>
+          Deep image analyzer
+        <p class="hint" 
+           data-ru="Комплексная утилита для цифровой криминалистики и приватности изображений. Включает парсер EXIF-метаданных, LSB-стеганографию с визуализатором младших битов, перцептивный хэш (pHash) для детекции изменений, анализ структурных контуров и модуль маскировки Anti-AI Cloak." 
+           data-en="Advanced suite for digital image forensics and privacy. Includes an EXIF metadata parser, LSB steganography with a bit-slicing visualizer, perceptual hashing (pHash) for tamper detection, structural edge analysis, and an Anti-AI noise cloak.">
+          Комплексная утилита для цифровой криминалистики и приватности изображений. Включает парсер EXIF-метаданных, LSB-стеганографию с визуализатором младших битов, перцептивный хэш (pHash) для детекции изменений, анализ структурных контуров и модуль маскировки Anti-AI Cloak.
+        </p>
+        
+        <a href="img.html" class="icon-btn">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span data-ru="Перейти" data-en="Launch Program">Перейти</span>
+        </a>
+      </div>
+
     </div>
 
   </main>
