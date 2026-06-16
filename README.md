@@ -23,15 +23,23 @@ px://hook acts as a full-featured web proxy and security analysis hub directly w
 
 ### 🚀 Core Modules
 **🎛️ Intruder (Automated Attacks):** A highly customizable automation engine for fuzzing, brute-forcing, and structured payload injection to stress-test endpoints and uncover vulnerabilities.
+
 **📊 Sequencer (Randomness Analysis):** Advanced statistical analysis tool to evaluate the unpredictability and randomness of session tokens, CSRF tokens, and cryptographic nonces.
+
 **🔄 Decoder & Comparer:** Integrated utilities for rapid data encoding/decoding (Hex, Base64, URL, etc.) and executing precise, visual differential analysis (diff) between separate requests or responses.
+
 **📂 Organizer & Session Hub:** A centralized workspace to catalog, filter, tag, and structure captured requests and analysis results for streamlined testing workflows.
+
 **⚡ Request Interception & Modification:** Real-time monitoring, capturing, and hot-swapping of HTTP/HTTPS traffic, headers, payloads, and cookies on the fly.
+
 **🛡️ DOM & XSS Vector Testing:** An isolated sandbox for evaluating structural payload mutations, analyzing DOM injection vectors, and auditing client-side security mechanisms.
+
 **🔍 Anomaly & Signature Detection:** Deep analysis of code structures and network traffic to identify non-standard patterns, broken packet signatures, and structural anomalies.
+
 ### ⚙️ Targeted Configuration
 #### 🌐 Scope Settings
 Strict target filtering definitions to isolate your traffic. Ensure your diagnostics, history, and automated attacks are strictly confined to specific domains, paths, ports, or protocols, eliminating background noise from unrelated browser traffic.
+
 #### 🔄 Match and Replace
 Rule-based, automated modification of headers, request/response bodies, or parameters on the fly. Use this to effortlessly analyze and swap site behavior under altered conditions, such as:
  * Emulating different user roles by replacing Auth headers.
