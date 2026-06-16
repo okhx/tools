@@ -17,9 +17,10 @@ A comprehensive tool for working with pixel structure and hidden image data:
 
 **Perceptual Hashing (pHash):** Analyze image structure, generate persistent hashes, and calculate Hamming distance to find visual duplicates and traces of editing.
 
-### 2. 🛠️ px://hook — Advanced Session Intercept & Security Diagnostics
+### 2. 🛠️ `px://hook` — Advanced Session Intercept & Security Diagnostics
 A comprehensive, specialized environment for capturing traffic, debugging web requests, automating payload injection, and auditing client-side application security.
 px://hook acts as a full-featured web proxy and security analysis hub directly within your ecosystem, designed for security engineers and developers.
+
 ### 🚀 Core Modules
 **🎛️ Intruder (Automated Attacks):** A highly customizable automation engine for fuzzing, brute-forcing, and structured payload injection to stress-test endpoints and uncover vulnerabilities.
 **📊 Sequencer (Randomness Analysis):** Advanced statistical analysis tool to evaluate the unpredictability and randomness of session tokens, CSRF tokens, and cryptographic nonces.
