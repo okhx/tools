@@ -282,6 +282,8 @@ body {
   cursor: pointer;
   transition: background .1s;
   position: relative;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .req-item:hover { background: rgba(255,255,255,.04); }
 .req-item.selected { background: rgba(255,255,255,.07); }
@@ -377,13 +379,14 @@ body {
 .ctx-item.danger { color: var(--red); }
 .ctx-sep { height: 1px; background: var(--line); margin: 0; }
 
-/* req detail */
 .request-detail {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 #detail-content {
@@ -623,6 +626,8 @@ body {
   display: flex;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .editor-tab {
   padding: 7px 14px;
@@ -724,6 +729,8 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .response-status-bar {
@@ -848,6 +855,281 @@ body {
   user-select: none;
 }
 
+.splitter {
+  flex: 0 0 auto;
+  background: #080808;
+  position: relative;
+  z-index: 20;
+  transition: background .12s;
+}
+.splitter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+.splitter.vertical {
+  width: 6px;
+  cursor: col-resize;
+  border-left: 1px solid #111;
+  border-right: 1px solid var(--line);
+}
+.splitter.horizontal {
+  height: 6px;
+  cursor: row-resize;
+  border-top: 1px solid #111;
+  border-bottom: 1px solid var(--line);
+}
+.splitter:hover,
+.splitter.dragging { background: rgba(96,165,250,.22); }
+.splitter.vertical:hover::after,
+.splitter.vertical.dragging::after { left: 1px; right: 1px; background: rgba(96,165,250,.75); }
+.splitter.horizontal:hover::after,
+.splitter.horizontal.dragging::after { top: 1px; bottom: 1px; background: rgba(96,165,250,.75); }
+body.resizing-panels,
+body.resizing-panels * { user-select: none !important; cursor: inherit !important; }
+
+.browser-console-resizer {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 9px;
+  cursor: row-resize;
+  z-index: 30;
+}
+.browser-console-resizer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 1px;
+  background: transparent;
+  transition: background .12s, height .12s;
+}
+.browser-console-resizer:hover::after,
+.browser-console-resizer.dragging::after {
+  top: 3px;
+  height: 3px;
+  background: rgba(96,165,250,.75);
+}
+
+.detail-header { position: relative; overflow: auto; }
+.detail-header-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  cursor: row-resize;
+  z-index: 25;
+}
+.detail-header-resizer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 3px;
+  height: 1px;
+  background: transparent;
+}
+.detail-header-resizer:hover::after,
+.detail-header-resizer.dragging::after { height: 3px; top: 2px; background: rgba(96,165,250,.75); }
+
+.browser-console-drawer {
+  flex-shrink: 0;
+  position: relative;
+  height: 34px;
+  border-top: 1px solid var(--line);
+  background: #050505;
+  display: flex;
+  flex-direction: column;
+  transition: height .18s ease;
+  overflow: hidden;
+  z-index: 5;
+}
+.browser-console-drawer.open { height: 240px; }
+.browser-console-header {
+  height: 34px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  background: #070707;
+}
+.browser-console-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.console-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-size: 9px;
+  letter-spacing: 0;
+}
+.browser-console-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.browser-console-tab,
+.browser-console-action {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .12s;
+}
+.browser-console-tab:hover,
+.browser-console-action:hover { border-color: var(--fg); color: var(--fg); }
+.browser-console-tab.active { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.browser-console-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+.browser-console-pane {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #333 #000;
+}
+.browser-console-pane.active { display: block; }
+.console-entry {
+  display: grid;
+  grid-template-columns: 72px 56px 1fr;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.console-entry .console-time { color: #555; }
+.console-entry .console-level { text-transform: uppercase; font-weight: 600; }
+.console-entry.log .console-level { color: var(--fg); }
+.console-entry.info .console-level,
+.console-entry.debug .console-level { color: var(--blue); }
+.console-entry.warn .console-level { color: var(--yellow); }
+.console-entry.error .console-level { color: var(--red); }
+.console-entry .console-msg { color: #ccc; white-space: pre-wrap; word-break: break-word; }
+.console-empty,
+.storage-empty {
+  color: #444;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 20px 0;
+  text-align: center;
+}
+.storage-monitor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.storage-box {
+  border: 1px solid var(--line);
+  background: #080808;
+  min-height: 70px;
+}
+.storage-box.wide { grid-column: 1 / -1; }
+.storage-box-title {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+}
+.storage-box pre {
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #ccc;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 120px;
+  overflow: auto;
+}
+.storage-events {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  background: #080808;
+}
+.storage-event {
+  display: grid;
+  grid-template-columns: 72px 105px 1fr;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 10px;
+  color: #aaa;
+}
+.storage-event:last-child { border-bottom: none; }
+.storage-event span:first-child { color: #555; }
+.storage-event span:nth-child(2) { color: var(--yellow); text-transform: uppercase; }
+
+.transform-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #070707;
+}
+.transform-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .12s;
+}
+.transform-btn:hover { border-color: var(--fg); color: var(--fg); }
+.transform-btn.primary { color: var(--blue); border-color: rgba(96,165,250,.35); }
+.transform-btn.primary:hover { color: var(--fg); border-color: var(--blue); }
+.transform-menu { min-width: 230px; }
+.transform-menu .ctx-item small {
+  margin-left: auto;
+  color: #555;
+  font-size: 9px;
+}
+.method-select {
+  min-width: 92px;
+  text-transform: uppercase;
+}
+
 @media (max-width: 700px) {
   .header {
     flex-direction: column;
@@ -859,7 +1141,6 @@ body {
     padding-bottom: 10px;
     border-bottom: 1px solid var(--line);
   }
-  /* Scrollable tab row */
   .header-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -886,6 +1167,7 @@ body {
   .intercept-panel {
     flex-direction: column !important;
   }
+  .splitter.vertical { width: 100%; height: 6px; cursor: row-resize; border-left: none; border-right: none; border-top: 1px solid #111; border-bottom: 1px solid var(--line); }
   .requests-sidebar {
     width: 100% !important;
     height: 40vh;
@@ -938,6 +1220,16 @@ body {
   .req-item { padding: 10px 10px; }
   .req-menu-btn { display: block !important; }
   .copy-btn { padding: 5px 10px; font-size: 10px; }
+  .browser-console-drawer.open { height: 42vh; }
+  .browser-console-header { padding: 0 8px; gap: 5px; }
+  .browser-console-title { font-size: 9px; }
+  .browser-console-actions { gap: 3px; overflow-x: auto; }
+  .browser-console-tab, .browser-console-action { padding: 4px 6px; font-size: 8px; }
+  .console-entry { grid-template-columns: 58px 48px 1fr; font-size: 10px; }
+  .storage-monitor-grid { grid-template-columns: 1fr; }
+  .storage-box.wide { grid-column: auto; }
+  .transform-toolbar { padding: 6px; gap: 5px; }
+  .transform-btn { flex: 1 1 auto; min-width: 72px; padding: 6px 7px; font-size: 9px; }
 }
 
 .scope-list {
@@ -1022,6 +1314,235 @@ body {
 }
 .new-tab-btn:hover { color: var(--fg); }
 
+
+.proxy-inline {
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,.28);
+  background: rgba(74,222,128,.07);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.header-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.header-tabs::-webkit-scrollbar { display: none; }
+.tab-btn { flex-shrink: 0; }
+
+.splitter::before,
+.browser-console-resizer::before,
+.detail-header-resizer::before {
+  content: 'DRAG TO RESIZE';
+  position: absolute;
+  color: #666;
+  font-size: 7px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: .75;
+}
+.splitter.vertical::before {
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  white-space: nowrap;
+}
+.splitter.horizontal::before,
+.browser-console-resizer::before,
+.detail-header-resizer::before {
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+.splitter:hover::before,
+.browser-console-resizer:hover::before,
+.detail-header-resizer:hover::before { color: var(--blue); opacity: 1; }
+
+.tool-panel { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.tool-intro {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #070707;
+  color: var(--muted);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tool-layout { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.tool-col { flex: 1; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+.tool-col:last-child { border-right: none; }
+.tool-sidebar { width: 360px; flex: 0 0 360px; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.tool-toolbar { padding: 9px 12px; border-bottom: 1px solid var(--line); background: #050505; display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.tool-input, .tool-select {
+  background: #111;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  outline: none;
+}
+.tool-input:focus, .tool-select:focus { border-color: var(--fg); }
+.tool-input { flex: 1; min-width: 120px; }
+.tool-area {
+  flex: 1;
+  min-height: 0;
+  background: #050505;
+  border: none;
+  color: #ccc;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 12px;
+  resize: none;
+  outline: none;
+  line-height: 1.65;
+}
+.tool-output { flex: 1; min-height: 0; overflow: auto; padding: 12px; background: #030303; }
+.tool-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.tool-table th, .tool-table td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+.tool-table th { color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; background: #050505; position: sticky; top: 0; }
+.tool-list { flex: 1; min-height: 0; overflow: auto; }
+.tool-list-item { padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.tool-list-item:hover, .tool-list-item.active { background: rgba(255,255,255,.05); }
+.tool-list-item-title { font-size: 11px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-list-item-meta { font-size: 10px; color: #555; margin-top: 3px; }
+.diff-line { display: grid; grid-template-columns: 50px 1fr 1fr; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 11px; }
+.diff-line span { padding: 4px 7px; white-space: pre-wrap; word-break: break-word; }
+.diff-line .ln { color: #555; background: #050505; }
+.diff-add { background: rgba(74,222,128,.08); color: #b9f6c9; }
+.diff-del { background: rgba(248,113,113,.08); color: #ffc0c0; }
+.diff-same { color: #888; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.metric-card { border: 1px solid var(--line); background: #080808; padding: 10px; }
+.metric-card strong { display: block; color: var(--fg); font-size: 18px; margin-top: 4px; }
+.metric-card span { color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+.intruder-marker { color: var(--yellow); }
+
+@media (max-width: 700px) {
+  .tool-layout { flex-direction: column; }
+  .tool-sidebar { width: 100%; flex: 0 0 32%; border-right: none; border-bottom: 1px solid var(--line); }
+  .tool-col { border-right: none; border-bottom: 1px solid var(--line); min-height: 180px; }
+  .tool-intro { flex-direction: column; align-items: stretch; }
+}
+
+.header-status { position: relative; }
+.header-mini-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #070707;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .12s;
+  flex-shrink: 0;
+}
+.header-mini-btn:hover { color: var(--fg); border-color: var(--fg); }
+.header-mini-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.header-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  max-height: 420px;
+  overflow: auto;
+  display: none;
+  background: #070707;
+  border: 1px solid var(--line);
+  z-index: 10050;
+  box-shadow: 0 12px 35px rgba(0,0,0,.75);
+}
+.header-popover.visible { display: block; }
+.header-popover-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: #050505;
+}
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  cursor: pointer;
+  font-size: 11px;
+}
+.history-item:hover { background: rgba(255,255,255,.06); }
+.history-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ddd; }
+.history-time { color: #555; font-size: 10px; }
+.settings-row { padding: 10px 11px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.settings-row label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; cursor: pointer; }
+.settings-scope-add { display: flex; gap: 6px; }
+.settings-scope-list { max-height: 190px; overflow: auto; }
+.settings-scope-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 11px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 11px;
+  color: #ccc;
+}
+
+.copy-btn.icon-only {
+  width: 27px;
+  height: 25px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  display: inline-flex;
+  font-size: 0;
+  vertical-align: middle;
+}
+.copy-btn.icon-only svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.req-menu-btn { display: block; opacity: .68; border: 1px solid transparent; }
+.req-menu-btn:hover { opacity: 1; border-color: var(--line); }
+
+.splitter { overflow: visible; }
+.splitter.vertical::before {
+  transform: translate(-50%, -50%) !important;
+  writing-mode: horizontal-tb;
+  background: rgba(5,5,5,.82);
+  border: 1px solid rgba(96,165,250,.18);
+  padding: 1px 4px;
+}
+
+.repeater-toolbar { gap: 5px; padding: 8px 10px; }
+.repeater-toolbar .method-select,
+#rep-method {
+  width: 64px;
+  min-width: 64px;
+  padding: 5px 6px;
+  font-size: 10px;
+}
+.repeater-toolbar .repeater-url { padding: 5px 8px; font-size: 11px; }
+.repeater-toolbar .send-btn { padding: 5px 11px; }
+.tool-splitter::before { content: 'resize'; }
+.tool-toolbar { position: sticky; top: 0; z-index: 4; }
+.tool-toolbar::after {
+  content: 'drag pane borders to resize';
+  color: #444;
+  font-size: 9px;
+  margin-left: auto;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 700px) {
+  .header-popover { left: 0; right: 0; width: auto; margin: 0 8px; }
+  //.proxy-inline { display: none; }
+  .tool-toolbar::after { display: none; }
+}
+
 .beta-toast {
   position: fixed;
   bottom: 20px;
@@ -1082,6 +1603,36 @@ body {
   animation: toastSlideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
 }
+
+.rewrite-rules-section { border-top: 1px solid var(--line); padding: 10px 11px; }
+.rewrite-rules-section-title { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.rewrite-rule-row { display: grid; grid-template-columns: 22px 1fr 110px 1fr 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
+.rewrite-rule-row select { background: #111; border: 1px solid var(--line); color: var(--fg); font-family: var(--mono); font-size: 10px; padding: 4px; outline: none; }
+.rewrite-rule-row input { background: #111; border: 1px solid var(--line); color: var(--fg); font-family: var(--mono); font-size: 10px; padding: 4px 6px; outline: none; }
+.rewrite-rule-row button { background: transparent; border: 1px solid var(--line); color: var(--muted); cursor: pointer; font-family: var(--mono); font-size: 12px; transition: all .12s; }
+.rewrite-rule-row button:hover { border-color: var(--red); color: var(--red); }
+.rewrite-rules-list { max-height: 200px; overflow: auto; }
+.rewrite-rule-entry { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 10px; color: #ccc; }
+.rewrite-rule-entry small { color: #555; font-size: 9px; }
+.rewrite-rule-active { color: var(--green); }
+.rewrite-rule-inactive { color: #555; text-decoration: line-through; }
+.vuln-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; background: rgba(248,113,113,.15); border: 1px solid rgba(248,113,113,.35); color: var(--red); font-size: 9px; margin-left: 4px; }
+.vuln-badge::before { content: '⚠'; }
+.vuln-list { display: flex; flex-direction: column; gap: 8px; }
+.vuln-item { background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.25); padding: 10px; }
+.vuln-item.severity-info { background: rgba(96,165,250,.06); border-color: rgba(96,165,250,.25); }
+.vuln-item.severity-low { background: rgba(250,204,21,.06); border-color: rgba(250,204,21,.25); }
+.vuln-item.severity-medium { background: rgba(248,113,113,.06); border-color: rgba(248,113,113,.25); }
+.vuln-item.severity-high { background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.45); }
+.vuln-title { font-size: 12px; font-weight: 600; color: var(--red); margin-bottom: 3px; }
+.vuln-item.severity-info .vuln-title { color: var(--blue); }
+.vuln-item.severity-low .vuln-title { color: var(--yellow); }
+.vuln-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.vuln-empty { color: #444; font-size: 11px; text-align: center; padding: 40px 0; }
+.applied-rules-list { margin-top: 8px; }
+.applied-rule { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; padding: 2px 6px; background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.3); color: var(--blue); margin-right: 4px; margin-bottom: 4px; }
+.section-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+
 </style>
 </head>
 <body>
@@ -1105,22 +1656,123 @@ body {
         <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         Repeater
       </button>
+      <button class="tab-btn" data-panel="organizer">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-filter-2-check">
+	<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+	<path d="M4 6h16" />
+	<path d="M6 12h12" />
+	<path d="M9 18h2" />
+	<path d="M15 18l2 2l4 -4" />
+</svg>
+
+        Organizer
+      </button>
+      <button class="tab-btn" data-panel="decoder">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-zoom-code">
+	<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+	<path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+	<path d="M21 21l-6 -6" />
+	<path d="M8 8l-2 2l2 2" />
+	<path d="M12 8l2 2l-2 2" />
+</svg>
+
+        Decoder
+      </button>
+      <button class="tab-btn" data-panel="comparer">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-components-off">
+	<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+	<path d="M3 12l3 3l3 -3l-3 -3l-3 3" />
+	<path d="M18.5 14.5l2.5 -2.5l-3 -3l-2.5 2.5" />
+	<path d="M12.499 8.501l2.501 -2.501l-3 -3l-2.5 2.5" />
+	<path d="M9 18l3 3l3 -3l-3 -3l-3 3" />
+	<path d="M3 3l18 18" />
+</svg>
+
+        Comparer
+      </button>
+      <button class="tab-btn" data-panel="intruder">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-adjustments">
+	<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+	<path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+	<path d="M6 4v4" />
+	<path d="M6 12v8" />
+	<path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+	<path d="M12 4v10" />
+	<path d="M12 18v2" />
+	<path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+	<path d="M18 4v1" />
+	<path d="M18 9v11" />
+</svg>
+
+        Intruder
+      </button>
+      <button class="tab-btn" data-panel="sequencer">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-waves-electricity">
+	<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+	<path d="M3 12c.576 -.643 1.512 -1.017 2.5 -1c.988 -.017 1.924 .357 2.5 1c.576 .643 1.512 1.017 2.5 1c.988 .017 1.924 -.357 2.5 -1" />
+	<path d="M3 16c.576 -.643 1.512 -1.017 2.5 -1c.988 -.017 1.924 .357 2.5 1c.576 .643 1.512 1.017 2.5 1c.988 .017 1.924 -.357 2.5 -1" />
+	<path d="M3 8c.576 -.643 1.512 -1.017 2.5 -1c.988 -.017 1.924 .357 2.5 1c.576 .643 1.512 1.017 2.5 1c.988 .017 1.924 -.357 2.5 -1" />
+	<path d="M20 7l-3 5h4l-3 5" />
+</svg>
+
+        Sequencer
+      </button>
     </div>
     <div class="header-status">
+      <button class="header-mini-btn" id="history-btn" title="Visited site history">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/><path d="M12 7v6l4 2"/></svg>
+      </button>
       <div class="status-dot">
         <div class="dot"></div>
         <span>intercepting</span>
       </div>
       <span id="req-total-stat">0 requests</span>
+      <span class="proxy-inline">🟢 Proxy</span>
+      <button class="header-mini-btn" id="settings-btn" title="Scope/settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8.6 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.9l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.3.31.48.71.6 1.1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div class="header-popover" id="history-popover">
+        <div class="header-popover-title"><span>Visited sites</span><button class="scope-remove" onclick="clearBrowserHistory()">clear</button></div>
+        <div id="history-list"><div class="console-empty">No history yet</div></div>
+      </div>
+      <div class="header-popover" id="settings-popover">
+        <div class="header-popover-title"><span>Scope settings</span><button class="scope-remove" onclick="toggleSettings(false)">×</button></div>
+        <div class="settings-row"><label><input type="checkbox" id="settings-scope-only"> Show only in-scope items</label></div>
+        <div class="settings-row">
+          <div class="settings-scope-add">
+            <input class="tool-input" id="settings-scope-input" placeholder="domain.com or /api/">
+            <button class="toolbar-btn" onclick="addScopeFromSettings()">Add</button>
+          </div>
+        </div>
+        <div class="header-popover-title"><span>Domains / strings in scope</span><button class="scope-remove" onclick="clearScope()">clear all</button></div>
+        <div class="settings-scope-list" id="settings-scope-list"><div class="console-empty">Scope is empty</div></div>
+
+        <div class="rewrite-rules-section">
+          <div class="rewrite-rules-section-title"><span>[REWRITE RULES]</span><button class="scope-remove" onclick="addRewriteRule()" title="Add rule">+</button></div>
+          <div class="rewrite-rule-row" style="font-size:9px;color:#555;letter-spacing:.05em;text-transform:uppercase;">
+            <span>On</span>
+            <span>Match type</span>
+            <span>Match</span>
+            <span>Replace / Value</span>
+            <span></span>
+          </div>
+          <div class="rewrite-rules-list" id="rewrite-rules-list"></div>
+          <div style="font-size:9px;color:#555;margin-top:6px;line-height:1.4;">
+            Types: URL, req-header, req-body, resp-header, resp-body. Regex supported. For headers use <code>Name: Value</code> format or <code>Name</code> only to remove.
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="panels">
 
     <div class="panel active" id="panel-browser">
-      <div class="browser-notice">
-        🟢 HTTP proxying engine is live. Direct cross-origin restrictions are bypassed.
-      </div>
       <div class="browser-bar">
         <div class="browser-nav-btns">
           <button class="nav-btn" id="btn-back" title="Back">
@@ -1131,10 +1783,9 @@ body {
           </button>
           <button class="nav-btn" id="btn-reload" title="Reload">
             <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          </button>
         </div>
         <div class="url-bar-wrap">
-          <input class="url-input" id="url-input" type="text" placeholder="https://example.com" value="https://example.com" />
+          <input class="url-input" id="url-input" type="text" placeholder="https://okhx.github.io" value="https://okhx.github.io" />
           <button class="url-go" id="btn-go">Go</button>
         </div>
       </div>
@@ -1143,6 +1794,29 @@ body {
         <div class="browser-overlay" id="browser-overlay">
           <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/></svg>
           <p>Enter a URL above and press Go</p>
+        </div>
+      </div>
+      <div class="browser-console-drawer" id="browser-console">
+        <div class="browser-console-header" id="browser-console-header" title="Click to expand console">
+          <div class="browser-console-title">
+            <span>[CONSOLE]</span>
+            <span class="console-badge" id="browser-console-count">0</span>
+            <span style="color:#444;letter-spacing:.04em;text-transform:none;">logs, errors, cookies & storage from the iframe</span>
+          </div>
+          <div class="browser-console-actions">
+            <button class="browser-console-tab active" data-browser-console-tab="console">Console</button>
+            <button class="browser-console-tab" data-browser-console-tab="storage">Storage</button>
+            <button class="browser-console-action" id="browser-console-clear" title="Clear console output">Clear</button>
+            <button class="browser-console-action" id="browser-console-toggle" title="Expand/collapse">▴</button>
+          </div>
+        </div>
+        <div class="browser-console-content">
+          <div class="browser-console-pane active" id="browser-console-pane">
+            <div class="console-empty">No iframe console messages yet</div>
+          </div>
+          <div class="browser-console-pane" id="browser-storage-pane">
+            <div class="storage-empty">Storage snapshot will appear after page load or click inside the browser</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1192,6 +1866,8 @@ body {
           </div>
         </div>
 
+        <div class="splitter vertical" id="intercept-splitter" title="Drag to resize request list"></div>
+
         <div class="request-detail" id="request-detail">
           <div class="detail-empty" id="detail-empty-msg">
             <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
@@ -1202,8 +1878,9 @@ body {
               <div class="detail-url-line">
                 <span id="detail-method-badge" class="req-method"></span>
                 <span class="detail-url" id="detail-url"></span>
-                <button class="copy-btn" onclick="copyDetailUrl()">Copy URL</button>
+                <button class="copy-btn icon-only" onclick="copyDetailUrl()" title="Copy URL"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 <button class="copy-btn" onclick="sendToRepeater()">→ Repeater</button>
+                <button class="copy-btn" onclick="addSelectedToOrganizer()">☆ Organizer</button>
               </div>
               <div class="detail-meta">
                 <span>Status: <span id="detail-status"></span></span>
@@ -1211,18 +1888,21 @@ body {
                 <span>Size: <span id="detail-size"></span></span>
                 <span id="detail-scope-badge"></span>
               </div>
+              <div class="detail-header-resizer" id="detail-header-resizer" title="Drag to resize request summary"></div>
             </div>
             <div class="detail-tabs">
               <button class="detail-tab active" data-pane="raw">Raw</button>
               <button class="detail-tab" data-pane="headers">Headers</button>
               <button class="detail-tab" data-pane="request-body">Request</button>
               <button class="detail-tab" data-pane="response">Response</button>
+              <button class="detail-tab" data-pane="vulns">Vulns</button>
             </div>
             <div class="detail-body">
               <div class="detail-pane active" id="pane-raw"></div>
               <div class="detail-pane" id="pane-headers"></div>
               <div class="detail-pane" id="pane-request-body"></div>
               <div class="detail-pane" id="pane-response"></div>
+              <div class="detail-pane" id="pane-vulns"></div>
             </div>
           </div>
         </div>
@@ -1243,15 +1923,18 @@ body {
             </div>
           </div>
           <div class="repeater-toolbar">
-            <select class="method-select" id="rep-method">
-              <option>GET</option>
-              <option>POST</option>
-              <option>PUT</option>
-              <option>PATCH</option>
-              <option>DELETE</option>
-              <option>HEAD</option>
-              <option>OPTIONS</option>
-            </select>
+            <input class="method-select" id="rep-method" list="http-method-list" value="GET" placeholder="METHOD" spellcheck="false" />
+            <datalist id="http-method-list">
+              <option value="GET"></option>
+              <option value="POST"></option>
+              <option value="PUT"></option>
+              <option value="PATCH"></option>
+              <option value="DELETE"></option>
+              <option value="HEAD"></option>
+              <option value="OPTIONS"></option>
+              <option value="TRACE"></option>
+              <option value="CONNECT"></option>
+            </datalist>
             <input class="repeater-url" id="rep-url" type="text" placeholder="https://target.com/api/endpoint" />
             <button class="send-btn" id="btn-send">
               <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1268,13 +1951,31 @@ body {
               <div class="headers-editor" id="rep-headers-list"></div>
             </div>
             <div class="editor-pane" id="editor-body-editor">
+              <div class="transform-toolbar" data-transform-target="rep-body">
+                <button class="transform-btn" data-transform-btn="url-encode">URL Enc</button>
+                <button class="transform-btn" data-transform-btn="url-decode">URL Dec</button>
+                <button class="transform-btn" data-transform-btn="base64-encode">B64 Enc</button>
+                <button class="transform-btn" data-transform-btn="base64-decode">B64 Dec</button>
+                <button class="transform-btn" data-transform-btn="html-encode">HTML Enc</button>
+                <button class="transform-btn" data-transform-btn="html-decode">HTML Dec</button>
+              </div>
               <textarea class="code-textarea" id="rep-body" placeholder="Request body (JSON, form data, XML…)"></textarea>
             </div>
             <div class="editor-pane" id="editor-raw-editor">
-              <textarea class="code-textarea" id="rep-raw" placeholder="GET /path HTTP/1.1&#10;Host: example.com&#10;Content-Type: application/json&#10;&#10;{&quot;key&quot;: &quot;value&quot;}"></textarea>
+              <div class="transform-toolbar" data-transform-target="rep-raw">
+                <button class="transform-btn" data-transform-btn="url-encode">URL Enc</button>
+                <button class="transform-btn" data-transform-btn="url-decode">URL Dec</button>
+                <button class="transform-btn" data-transform-btn="base64-encode">B64 Enc</button>
+                <button class="transform-btn" data-transform-btn="base64-decode">B64 Dec</button>
+                <button class="transform-btn primary" id="btn-parse-raw" type="button">Parse → Fields</button>
+                <button class="transform-btn primary" id="btn-build-raw" type="button">Fields → Raw</button>
+              </div>
+              <textarea class="code-textarea" id="rep-raw" placeholder="GET /path HTTP/1.1&#10;Host: okhx.github.io&#10;Content-Type: application/json&#10;&#10;{&quot;key&quot;: &quot;value&quot;}"></textarea>
             </div>
           </div>
         </div>
+
+        <div class="splitter vertical" id="repeater-splitter" title="Drag to resize repeater panes"></div>
 
         <div class="repeater-response-pane">
           <div class="pane-header">
@@ -1307,17 +2008,127 @@ body {
       </div>
     </div>
 
+
+    <div class="panel" id="panel-organizer">
+      <div class="tool-panel">
+        <div class="tool-intro">
+          <span><b>Organizer</b> stores HTTP messages you want to investigate later. Use ☆ Organizer from request details or the request context menu.</span>
+          <div><button class="toolbar-btn danger" onclick="clearOrganizer()">Clear Organizer</button></div>
+        </div>
+        <div class="tool-layout">
+          <div class="tool-sidebar">
+            <div class="tool-toolbar">
+              <input class="tool-input" id="organizer-filter" placeholder="filter saved messages…">
+            </div>
+            <div class="tool-list" id="organizer-list"><div class="detail-empty"><span>No saved messages</span></div></div>
+          </div>
+          <div class="tool-col">
+            <div class="pane-header"><div class="pane-label">Saved message</div><div id="organizer-meta"></div></div>
+            <textarea class="tool-area" id="organizer-note" placeholder="Notes / hypothesis / findings…"></textarea>
+          </div>
+          <div class="tool-col">
+            <div class="pane-header"><div class="pane-label">HTTP data</div><div><button class="copy-btn icon-only" onclick="copyOrganizerRaw()" title="Copy raw"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="copy-btn" onclick="organizerToRepeater()">→ Repeater</button></div></div>
+            <div class="tool-output"><pre class="raw-block" id="organizer-raw">Select a saved message</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-decoder">
+      <div class="tool-panel">
+        <div class="tool-intro"><span><b>Decoder</b> manually encodes/decodes application data. Paste text, choose an operation, or use Auto Decode.</span></div>
+        <div class="tool-layout">
+          <div class="tool-col">
+            <div class="tool-toolbar">
+              <select class="tool-select" id="decoder-op">
+                <option value="url-decode">URL Decode</option>
+                <option value="url-encode">URL Encode</option>
+                <option value="base64-decode">Base64 Decode</option>
+                <option value="base64-encode">Base64 Encode</option>
+                <option value="html-decode">HTML Decode</option>
+                <option value="html-encode">HTML Encode</option>
+                <option value="hex-decode">Hex Decode</option>
+                <option value="hex-encode">Hex Encode</option>
+              </select>
+              <button class="toolbar-btn" onclick="runDecoder()">Run</button>
+              <button class="toolbar-btn" onclick="autoDecode()">Auto Decode</button>
+              <button class="toolbar-btn" onclick="swapDecoder()">Swap</button>
+              <button class="toolbar-btn" onclick="clearDecoder()">Clear</button>
+            </div>
+            <textarea class="tool-area" id="decoder-input" placeholder="Paste encoded or plain data here…"></textarea>
+          </div>
+          <div class="tool-col">
+            <div class="pane-header"><div class="pane-label">Output</div><button class="copy-btn icon-only" onclick="copyToClipboard(document.getElementById('decoder-output').value)" title="Copy output"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+            <textarea class="tool-area" id="decoder-output" placeholder="Decoded/encoded output…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-comparer">
+      <div class="tool-panel">
+        <div class="tool-intro"><span><b>Comparer</b> visually diffs two pieces of data, like two similar HTTP messages or token samples.</span><div><button class="toolbar-btn" onclick="loadComparerFromSelection()">Load selected request/response</button><button class="toolbar-btn" onclick="runComparer()">Compare</button></div></div>
+        <div class="tool-layout" style="height:42%;flex:0 0 42%;border-bottom:1px solid var(--line);">
+          <div class="tool-col"><div class="pane-header"><div class="pane-label">Left</div></div><textarea class="tool-area" id="compare-left" placeholder="Left item…"></textarea></div>
+          <div class="tool-col"><div class="pane-header"><div class="pane-label">Right</div></div><textarea class="tool-area" id="compare-right" placeholder="Right item…"></textarea></div>
+        </div>
+        <div class="tool-output" id="compare-output"><div class="console-empty">Click Compare to see a line-by-line diff</div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-intruder">
+      <div class="tool-panel">
+        <div class="tool-intro"><span><b>Intruder</b> sends a marked request repeatedly with different payloads. Use responsibly on authorized systems. Marker: <span class="intruder-marker">§FUZZ§</span></span><div><button class="toolbar-btn" onclick="loadIntruderFromRepeater()">Load from Repeater</button><button class="toolbar-btn" onclick="markIntruderSelection()">Wrap Selection</button></div></div>
+        <div class="tool-layout">
+          <div class="tool-col">
+            <div class="tool-toolbar">
+              <input class="tool-input" id="intruder-delay" value="250" title="Delay between requests in ms" style="max-width:90px;" />
+              <button class="toolbar-btn" onclick="startIntruder()" id="intruder-start">Start</button>
+              <button class="toolbar-btn danger" onclick="stopIntruder()">Stop</button>
+              <button class="toolbar-btn" onclick="document.getElementById('intruder-file-input').click()">Import .txt</button>
+              <input type="file" id="intruder-file-input" accept=".txt,text/plain" style="display:none">
+              <span style="color:#555;font-size:10px;">Delay ms / one payload per line</span>
+            </div>
+            <textarea class="tool-area" id="intruder-raw" placeholder="GET /path?x=§FUZZ§ HTTP/1.1&#10;Host: okhx.github.io&#10;&#10;body=§FUZZ§"></textarea>
+          </div>
+          <div class="tool-col" style="flex:.65;">
+            <div class="pane-header"><div class="pane-label">Payloads</div></div>
+            <textarea class="tool-area" id="intruder-payloads" placeholder="admin&#10;test&#10;123456"></textarea>
+          </div>
+          <div class="tool-col">
+            <div class="pane-header"><div class="pane-label">Results</div><span id="intruder-status" style="color:var(--muted);font-size:10px;"></span></div>
+            <div class="tool-output"><table class="tool-table"><thead><tr><th>#</th><th>Payload</th><th>Status</th><th>Length</th><th>Time</th></tr></thead><tbody id="intruder-results"></tbody></table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-sequencer">
+      <div class="tool-panel">
+        <div class="tool-intro"><span><b>Sequencer</b> estimates token randomness using entropy, uniqueness, length stability, and character distribution. Paste one token per line.</span><div><button class="toolbar-btn" onclick="runSequencer()">Analyze</button><button class="toolbar-btn" onclick="loadSequencerFromSelection()">Load selected request cookies</button></div></div>
+        <div class="tool-layout">
+          <div class="tool-col" style="flex:.75;"><textarea class="tool-area" id="sequencer-input" placeholder="token1&#10;token2&#10;token3"></textarea></div>
+          <div class="tool-col"><div class="tool-output" id="sequencer-output"><div class="console-empty">Paste tokens and click Analyze</div></div></div>
+        </div>
+      </div>
+    </div>
+
+
   </div>
 </div>
 
 <div class="ctx-menu" id="ctx-menu">
   <div class="ctx-item scope" onclick="ctxAddToScope()">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-    Add to Scope
+    Add domain to scope
   </div>
   <div class="ctx-item repeater" onclick="ctxSendToRepeater()">
     <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     Send to Repeater
+  </div>
+  <div class="ctx-item" onclick="ctxAddToOrganizer()">
+    <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    Save to Organizer
   </div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" onclick="ctxCopyUrl()">
@@ -1333,6 +2144,19 @@ body {
     <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
     Delete
   </div>
+</div>
+
+
+<div class="ctx-menu transform-menu" id="transform-menu">
+  <div class="ctx-item" data-transform-action="url-encode">Transform: URL Encode <small>Ctrl+Shift+U</small></div>
+  <div class="ctx-item" data-transform-action="url-decode">Transform: URL Decode <small>Ctrl+Shift+J</small></div>
+  <div class="ctx-item" data-transform-action="base64-encode">Transform: Base64 Encode <small>Ctrl+Shift+E</small></div>
+  <div class="ctx-item" data-transform-action="base64-decode">Transform: Base64 Decode <small>Ctrl+Shift+B</small></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" data-transform-action="html-encode">Transform: HTML Encode</div>
+  <div class="ctx-item" data-transform-action="html-decode">Transform: HTML Decode</div>
+  <div class="ctx-item" data-transform-action="hex-encode">Transform: Hex Encode</div>
+  <div class="ctx-item" data-transform-action="hex-decode">Transform: Hex Decode</div>
 </div>
 
 <div class="beta-toast" id="beta-toast">
@@ -1358,8 +2182,22 @@ let repTabCounter = 0;
 let activeRepTab = null;
 let repTabs = [];
 
+let organizerItems = [];
+let selectedOrganizerId = null;
+let intruderRunning = false;
+
+let iframeConsoleEntries = [];
+let iframeStorageEvents = [];
+let iframeStorageState = { cookies: '', localStorage: {}, sessionStorage: {} };
+let activeBrowserConsoleTab = 'console';
+let activeTransformTextarea = null;
+let transformRange = null;
+const MAX_CONSOLE_ENTRIES = 500;
+const MAX_STORAGE_EVENTS = 120;
+
 let browserHistory = [];
 let browserHistoryIdx = -1;
+let siteHistory = [];
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1374,28 +2212,41 @@ const urlInput = document.getElementById('url-input');
 const mainIframe = document.getElementById('main-iframe');
 const browserOverlay = document.getElementById('browser-overlay');
 
-async function navigate(url) {
+async function navigate(url, pushHistory = true) {
   if (!url) return;
   if (!url.startsWith('http')) url = 'https://' + url;
   urlInput.value = url;
+  iframeConsoleEntries = [];
+  iframeStorageEvents = [];
+  iframeStorageState = { cookies: '', localStorage: {}, sessionStorage: {} };
+  renderBrowserConsole();
+  renderStorageMonitor();
 
   browserOverlay.classList.add('hidden');
   mainIframe.removeAttribute('src');
   mainIframe.srcdoc = `<div style="color:#888;background:#000;padding:20px;font-family:monospace;font-size:12px;">Connecting to ${url} via secure proxy pipeline...</div>`;
 
-  if (browserHistoryIdx < browserHistory.length - 1) {
-    browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
+  if (pushHistory) {
+    if (browserHistoryIdx < browserHistory.length - 1) {
+      browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
+    }
+    browserHistory.push(url);
+    browserHistoryIdx = browserHistory.length - 1;
+    addVisitedSite(url);
   }
-  browserHistory.push(url);
-  browserHistoryIdx = browserHistory.length - 1;
 
   const startTime = performance.now();
+  let navTimeout = null;
   try {
     const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
-    const res = await fetch(proxiedUrl);
+    const controller = new AbortController();
+    navTimeout = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(proxiedUrl, { signal: controller.signal, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     
     let html = await res.text();
+    clearTimeout(navTimeout);
+    navTimeout = null;
     const elapsed = Math.round(performance.now() - startTime);
 
     const respHeaders = {};
@@ -1415,49 +2266,512 @@ async function navigate(url) {
       responseHeaders: respHeaders,
       responseBody: html,
       size: formatBytes(new Blob([html]).size),
-      duration: elapsed + 'ms'
+      duration: elapsed + 'ms',
+      requestType: 'navigation',
+      frameUrl: url,
+      pageTitle: 'Top-level HTML document'
     });
 	// runtime injection
     const instrumentationHook = `
-      <base href="${url}">
+      <base href="${escHtml(url)}">
       <script>
         (function() {
-          const _proxy = "${CORS_PROXY}";
+          if (window.__pxHookInstalled) return;
+          window.__pxHookInstalled = true;
+
+          const _proxy = ${JSON.stringify(CORS_PROXY)};
+          const _frameId = Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
+          const _baseUrl = location.href;
+
+          function post(payload) {
+            try {
+              payload.frameId = _frameId;
+              payload.frameUrl = location.href;
+              payload.pageTitle = document.title || '';
+              payload.time = Date.now();
+              window.parent.postMessage(payload, '*');
+            } catch(e) {}
+          }
+
           function proxyfy(u) {
             try {
               const abs = new URL(u, document.baseURI).href;
-              if (abs.startsWith(_proxy) || abs.startsWith('data:')) return abs;
+              if (abs.startsWith(_proxy) || abs.startsWith('data:') || abs.startsWith('blob:') || abs.startsWith('javascript:') || abs.startsWith('about:') || abs.startsWith('mailto:')) return abs;
               return _proxy + encodeURIComponent(abs);
             } catch(e) { return u; }
           }
-		// hook native fetch
-          const origFetch = window.fetch;
-          window.fetch = async function(resource, init) {
-            let targetUrl = typeof resource === 'string' ? resource : resource.url;
-            const fullUrl = new URL(targetUrl, document.baseURI).href;
-            const method = (init && init.method) || 'GET';
-            
-            window.parent.postMessage({ type: 'IFRAME_AJAX', method, url: fullUrl, body: (init && init.body) || '' }, '*');
 
-            if (typeof resource === 'string') { resource = proxyfy(resource); } 
-            else { resource.url = proxyfy(resource.url); }
-            return origFetch(resource, init);
+          const MAX_CAPTURE_CHARS = 120000;
+          function capText(text) {
+            text = String(text == null ? '' : text);
+            if (text.length <= MAX_CAPTURE_CHARS) return text;
+            return text.slice(0, MAX_CAPTURE_CHARS) + '\n...[truncated: captured first ' + MAX_CAPTURE_CHARS + ' chars of ' + text.length + ']';
+          }
+
+          async function responsePreview(response) {
+            try {
+              const contentType = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
+              const contentLength = parseInt((response.headers && response.headers.get && response.headers.get('content-length')) || '0', 10) || 0;
+              if (contentLength > MAX_CAPTURE_CHARS) {
+                return '[body omitted for speed: ' + (contentType || 'unknown type') + ', ' + contentLength + ' bytes]';
+              }
+              return capText(await response.text());
+            } catch(e) {
+              return '[unreadable response: ' + e.message + ']';
+            }
+          }
+
+          function safeStringify(value) {
+            try {
+              if (typeof value === 'string') return capText(value);
+              if (value instanceof Error) return capText(value.stack || value.message || String(value));
+              if (value instanceof Element) return '<' + value.tagName.toLowerCase() + (value.id ? '#' + value.id : '') + (value.className ? '.' + String(value.className).trim().replace(/\s+/g,'.') : '') + '>';
+              return capText(JSON.stringify(value, function(k, v) {
+                if (typeof v === 'function') return '[Function ' + (v.name || 'anonymous') + ']';
+                if (typeof Node !== 'undefined' && v instanceof Node) return '[Node ' + v.nodeName + ']';
+                return v;
+              }, 2));
+            } catch(e) {
+              try { return capText(String(value)); } catch(_) { return '[Unserializable]'; }
+            }
+          }
+
+          function argsToStrings(args) {
+            return Array.prototype.slice.call(args).map(safeStringify);
+          }
+
+          function headersToObject(headers) {
+            const obj = {};
+            try {
+              if (!headers) return obj;
+              if (headers instanceof Headers) { headers.forEach(function(v,k){ obj[k] = v; }); return obj; }
+              if (Array.isArray(headers)) { headers.forEach(function(pair){ if (pair && pair.length >= 2) obj[pair[0]] = pair[1]; }); return obj; }
+              Object.keys(headers).forEach(function(k){ obj[k] = headers[k]; });
+            } catch(e) {}
+            return obj;
+          }
+
+          function parseResponseHeaders(raw) {
+            const obj = {};
+            try {
+              String(raw || '').trim().split(/[\r\n]+/).forEach(function(line) {
+                const idx = line.indexOf(':');
+                if (idx > -1) obj[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+              });
+            } catch(e) {}
+            return obj;
+          }
+
+          function bodyPreview(body) {
+            try {
+              if (body == null) return '';
+              if (typeof body === 'string') return capText(body);
+              if (body instanceof URLSearchParams) return capText(body.toString());
+              if (body instanceof FormData) {
+                const out = [];
+                body.forEach(function(v, k) { out.push(k + '=' + (v && v.name ? '[File ' + v.name + ']' : String(v))); });
+                return capText(out.join('&'));
+              }
+              if (body instanceof Blob) return '[Blob ' + body.type + ' ' + body.size + ' bytes]';
+              if (body instanceof ArrayBuffer) return '[ArrayBuffer ' + body.byteLength + ' bytes]';
+              return capText(String(body));
+            } catch(e) { return '[unreadable body]'; }
+          }
+
+          function storageToObject(storage) {
+            const obj = {};
+            try {
+              for (let i = 0; i < storage.length; i++) {
+                const k = storage.key(i);
+                obj[k] = capText(storage.getItem(k));
+              }
+            } catch(e) { obj.__error = e.message; }
+            return obj;
+          }
+
+          function postStorage(reason, extra) {
+            post({
+              type: 'IFRAME_STORAGE',
+              reason: reason || 'snapshot',
+              cookies: (function(){ try { return document.cookie || ''; } catch(e) { return '[cookie read blocked: ' + e.message + ']'; } })(),
+              localStorage: (function(){ try { return storageToObject(window.localStorage); } catch(e) { return { __error: e.message }; } })(),
+              sessionStorage: (function(){ try { return storageToObject(window.sessionStorage); } catch(e) { return { __error: e.message }; } })(),
+              extra: extra || {}
+            });
+          }
+
+          // console + error hooks
+          ['log','info','warn','error','debug'].forEach(function(level) {
+            const original = console[level];
+            console[level] = function() {
+              post({ type: 'IFRAME_CONSOLE', level: level, args: argsToStrings(arguments), stack: (new Error()).stack || '' });
+              if (original) return original.apply(console, arguments);
+            };
+          });
+
+          window.addEventListener('error', function(e) {
+            post({
+              type: 'IFRAME_ERROR',
+              level: 'error',
+              message: e.message || 'Script error',
+              filename: e.filename || '',
+              lineno: e.lineno || 0,
+              colno: e.colno || 0,
+              stack: e.error && (e.error.stack || e.error.message) || ''
+            });
+          }, true);
+
+          window.addEventListener('unhandledrejection', function(e) {
+            post({
+              type: 'IFRAME_ERROR',
+              level: 'error',
+              message: 'Unhandled promise rejection: ' + safeStringify(e.reason),
+              stack: e.reason && (e.reason.stack || e.reason.message) || ''
+            });
+          }, true);
+
+          // cookie + storage hooks
+          try {
+            const cookieDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie') || Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'cookie');
+            if (cookieDesc && cookieDesc.configurable) {
+              Object.defineProperty(document, 'cookie', {
+                configurable: true,
+                get: function() { return cookieDesc.get.call(document); },
+                set: function(v) {
+                  const result = cookieDesc.set.call(document, v);
+                  postStorage('cookie-set', { value: String(v) });
+                  return result;
+                }
+              });
+            }
+          } catch(e) {}
+
+          function hookStorage(storage, name) {
+            try {
+              ['setItem','removeItem','clear'].forEach(function(methodName) {
+                const original = storage[methodName];
+                storage[methodName] = function() {
+                  const result = original.apply(storage, arguments);
+                  postStorage(name + '.' + methodName, { key: arguments[0] || '', value: arguments[1] || '' });
+                  return result;
+                };
+              });
+            } catch(e) {}
+          }
+          hookStorage(window.localStorage, 'localStorage');
+          hookStorage(window.sessionStorage, 'sessionStorage');
+
+          let lastCookie = '';
+          setInterval(function() {
+            try {
+              const current = document.cookie || '';
+              if (current !== lastCookie) {
+                lastCookie = current;
+                postStorage('cookie-poll');
+              }
+            } catch(e) {}
+          }, 1000);
+
+          document.addEventListener('click', function(e) {
+            const target = e.target;
+            postStorage('dom-click', {
+              tag: target && target.tagName || '',
+              id: target && target.id || '',
+              className: target && String(target.className || '').slice(0, 120) || ''
+            });
+          }, true);
+          setTimeout(function(){ postStorage('initial'); }, 0);
+
+          // ---------- DOM subresource proxying + capture ----------
+          const SUBRESOURCE_ATTRS = {
+            img: ['src','srcset'], source: ['src','srcset'], script: ['src'], link: ['href'],
+            a: ['href'], form: ['action'], iframe: ['src'], video: ['src','poster'],
+            audio: ['src','poster'], embed: ['src'], object: ['data'], input: ['formaction'],
+            button: ['formaction'], base: ['href']
           };
+
+          function rewriteElementAttrs(el) {
+            const tag = (el.tagName || '').toLowerCase();
+            const attrs = SUBRESOURCE_ATTRS[tag];
+            if (!attrs) return;
+            attrs.forEach(function(attr) {
+              if (!el.hasAttribute(attr)) return;
+              let val = el.getAttribute(attr);
+              if (!val) return;
+              if (attr === 'srcset') {
+                val = val.split(',').map(function(part) {
+                  const pieces = part.trim().split(/\s+/);
+                  if (pieces[0]) pieces[0] = proxyfy(pieces[0]);
+                  return pieces.join(' ');
+                }).join(', ');
+              } else {
+                val = proxyfy(val);
+              }
+              el.setAttribute(attr, val);
+            });
+          }
+
+          function reportSubresource(el) {
+            const tag = (el.tagName || '').toLowerCase();
+            const attrs = SUBRESOURCE_ATTRS[tag] || [];
+            for (const attr of attrs) {
+              if (el.hasAttribute(attr)) {
+                const u = el.getAttribute(attr);
+                if (u && !u.startsWith(_proxy) && !u.startsWith('data:') && !u.startsWith('blob:') && !u.startsWith('javascript:')) {
+                  post({
+                    type: 'IFRAME_SUBRESOURCE',
+                    requestType: 'subresource',
+                    method: 'GET',
+                    url: u,
+                    headers: { 'Referer': document.referrer || '', 'User-Agent': navigator.userAgent },
+                    body: '',
+                    status: 200,
+                    statusText: 'Subresource (intercepted)',
+                    responseHeaders: {},
+                    responseBody: '[subresource body not captured via DOM hook]',
+                    size: '-',
+                    duration: '0ms',
+                    tagName: tag,
+                    attr: attr
+                  });
+                }
+                break;
+              }
+            }
+          }
+
+          // Rewrite existing elements
+          document.querySelectorAll(Object.keys(SUBRESOURCE_ATTRS).join(',')).forEach(function(el) {
+            rewriteElementAttrs(el);
+            reportSubresource(el);
+          });
+
+          // Hook new elements before they are inserted
+          const origAppend = Element.prototype.appendChild;
+          const origInsertBefore = Element.prototype.insertBefore;
+          const origReplaceChild = Element.prototype.replaceChild;
+
+          function wrapInsert(el) {
+            if (el instanceof Element) {
+              rewriteElementAttrs(el);
+              reportSubresource(el);
+              el.querySelectorAll && el.querySelectorAll(Object.keys(SUBRESOURCE_ATTRS).join(',')).forEach(function(child) {
+                rewriteElementAttrs(child);
+                reportSubresource(child);
+              });
+            }
+          }
+
+          Element.prototype.appendChild = function(child) { wrapInsert(child); return origAppend.call(this, child); };
+          Element.prototype.insertBefore = function(newChild, refChild) { wrapInsert(newChild); return origInsertBefore.call(this, newChild, refChild); };
+          Element.prototype.replaceChild = function(newChild, oldChild) { wrapInsert(newChild); return origReplaceChild.call(this, newChild, oldChild); };
+
+          // MutationObserver fallback for dynamic attributes
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+              if (m.type === 'attributes' && SUBRESOURCE_ATTRS[(m.target.tagName || '').toLowerCase()] && SUBRESOURCE_ATTRS[(m.target.tagName || '').toLowerCase()].includes(m.attributeName)) {
+                rewriteElementAttrs(m.target);
+                reportSubresource(m.target);
+              }
+              if (m.type === 'childList') {
+                m.addedNodes.forEach(function(n) {
+                  if (n.nodeType === 1) {
+                    rewriteElementAttrs(n);
+                    reportSubresource(n);
+                    n.querySelectorAll && n.querySelectorAll(Object.keys(SUBRESOURCE_ATTRS).join(',')).forEach(function(child) {
+                      rewriteElementAttrs(child);
+                      reportSubresource(child);
+                    });
+                  }
+                });
+              }
+            });
+          });
+          observer.observe(document.documentElement || document.body, { childList: true, subtree: true, attributes: true });
+
+          // Intercept navigation via anchor clicks / form submissions
+          document.addEventListener('click', function(e) {
+            const a = e.target.closest('a');
+            if (a && a.href && !a.href.startsWith('javascript:') && !a.href.startsWith('mailto:') && !a.target) {
+              const abs = new URL(a.href, document.baseURI).href;
+              post({ type: 'IFRAME_NAVIGATE', url: abs, reason: 'anchor-click' });
+            }
+          }, true);
+
+          document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form && form.action) {
+              const abs = new URL(form.action, document.baseURI).href;
+              post({ type: 'IFRAME_NAVIGATE', url: abs, reason: 'form-submit' });
+            }
+          }, true);
+
+          // Periodically report resource timing entries for real subresource loads
+          setInterval(function() {
+            try {
+              const entries = performance.getEntriesByType('resource') || [];
+              entries.forEach(function(r) {
+                if (r.name && !r.name.startsWith(_proxy)) {
+                  post({
+                    type: 'IFRAME_SUBRESOURCE_TIMING',
+                    requestType: 'subresource-timing',
+                    method: 'GET',
+                    url: r.name,
+                    headers: {},
+                    body: '',
+                    status: 200,
+                    statusText: 'Resource Timing',
+                    responseHeaders: {},
+                    responseBody: '[timing-only]',
+                    size: r.transferSize || 0,
+                    duration: Math.round(r.duration || 0) + 'ms'
+                  });
+                }
+              });
+              performance.clearResourceTimings && performance.clearResourceTimings();
+            } catch(e) {}
+          }, 2500);
+
+          // hook native fetch and capture request + response details
+          const origFetch = window.fetch;
+          if (origFetch) {
+            window.fetch = async function(resource, init) {
+              init = init || {};
+              const started = performance.now();
+              let targetUrl = '';
+              let method = 'GET';
+              let reqHeaders = {};
+              let reqBody = '';
+              try {
+                targetUrl = (typeof resource === 'string' || resource instanceof URL) ? String(resource) : (resource && resource.url) || '';
+                method = String(init.method || (resource && resource.method) || 'GET').toUpperCase();
+                reqHeaders = headersToObject(init.headers || (resource && resource.headers));
+                reqBody = bodyPreview(init.body);
+              } catch(e) {}
+              const fullUrl = (function(){ try { return new URL(targetUrl, document.baseURI).href; } catch(e) { return targetUrl; } })();
+              const initiator = (new Error()).stack || '';
+
+              let proxiedResource = resource;
+              try {
+                if (typeof Request !== 'undefined' && resource instanceof Request) {
+                  proxiedResource = new Request(proxyfy(resource.url), resource);
+                } else if (typeof resource === 'string' || resource instanceof URL) {
+                  proxiedResource = proxyfy(String(resource));
+                } else if (resource && resource.url) {
+                  proxiedResource = proxyfy(resource.url);
+                  if (!init.method && resource.method) init.method = resource.method;
+                  if (!init.headers && resource.headers) init.headers = resource.headers;
+                }
+              } catch(e) {}
+
+              try {
+                const response = await origFetch.call(this, proxiedResource, init);
+                const elapsed = Math.round(performance.now() - started);
+                const cloned = response.clone();
+                const basePayload = {
+                  type: 'IFRAME_AJAX',
+                  requestType: 'fetch',
+                  method: method,
+                  url: fullUrl,
+                  headers: reqHeaders,
+                  body: reqBody,
+                  status: response.status,
+                  statusText: response.statusText,
+                  responseHeaders: headersToObject(response.headers),
+                  duration: elapsed + 'ms',
+                  initiator: initiator,
+                  fetchMeta: {
+                    credentials: init.credentials || '',
+                    mode: init.mode || '',
+                    cache: init.cache || '',
+                    redirect: init.redirect || '',
+                    referrer: init.referrer || document.referrer || ''
+                  }
+                };
+                setTimeout(function() {
+                  responsePreview(cloned).then(function(responseBody) {
+                    basePayload.responseBody = responseBody;
+                    basePayload.size = responseBody ? responseBody.length : 0;
+                    post(basePayload);
+                  }).catch(function(e) {
+                    basePayload.responseBody = '[unreadable response: ' + e.message + ']';
+                    basePayload.size = 0;
+                    post(basePayload);
+                  });
+                }, 0);
+                return response;
+              } catch(err) {
+                const elapsed = Math.round(performance.now() - started);
+                post({
+                  type: 'IFRAME_AJAX',
+                  requestType: 'fetch',
+                  method: method,
+                  url: fullUrl,
+                  headers: reqHeaders,
+                  body: reqBody,
+                  status: 0,
+                  statusText: 'Fetch Error',
+                  responseHeaders: {},
+                  responseBody: String(err && (err.stack || err.message) || err),
+                  duration: elapsed + 'ms',
+                  initiator: initiator,
+                  error: true
+                });
+                throw err;
+              }
+            };
+          }
 
           const origOpen = XMLHttpRequest.prototype.open;
-          XMLHttpRequest.prototype.open = function(method, url, ...args) {
-            this._method = method;
-            this._url = new URL(url, document.baseURI).href;
-            return origOpen.apply(this, [method, proxyfy(url), ...args]);
-          };
           const origSend = XMLHttpRequest.prototype.send;
+          const origSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+          XMLHttpRequest.prototype.open = function(method, url) {
+            this._pxMethod = String(method || 'GET').toUpperCase();
+            this._pxUrl = (function(){ try { return new URL(url, document.baseURI).href; } catch(e) { return url; } })();
+            this._pxHeaders = {};
+            this._pxStarted = 0;
+            const args = Array.prototype.slice.call(arguments);
+            args[1] = proxyfy(url);
+            return origOpen.apply(this, args);
+          };
+          XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+            try { this._pxHeaders[name] = value; } catch(e) {}
+            return origSetRequestHeader.apply(this, arguments);
+          };
           XMLHttpRequest.prototype.send = function(body) {
-            window.parent.postMessage({ type: 'IFRAME_AJAX', method: this._method, url: this._url, body: body || '' }, '*');
-            return origSend.apply(this, [body]);
+            this._pxStarted = performance.now();
+            const xhr = this;
+            const initiator = (new Error()).stack || '';
+            function done() {
+              let responseBody = '';
+              try {
+                if (!xhr.responseType || xhr.responseType === 'text' || xhr.responseType === '') responseBody = capText(xhr.responseText || '');
+                else responseBody = '[responseType=' + xhr.responseType + ']';
+              } catch(e) { responseBody = '[unreadable response: ' + e.message + ']'; }
+              post({
+                type: 'IFRAME_AJAX',
+                requestType: 'xhr',
+                method: xhr._pxMethod || 'GET',
+                url: xhr._pxUrl || '',
+                headers: xhr._pxHeaders || {},
+                body: bodyPreview(body),
+                status: xhr.status || 0,
+                statusText: xhr.statusText || '',
+                responseHeaders: parseResponseHeaders(xhr.getAllResponseHeaders && xhr.getAllResponseHeaders()),
+                responseBody: responseBody,
+                size: responseBody ? responseBody.length : 0,
+                duration: Math.round(performance.now() - (xhr._pxStarted || performance.now())) + 'ms',
+                initiator: initiator
+              });
+            }
+            try { this.addEventListener('loadend', done, { once: true }); } catch(e) {}
+            return origSend.apply(this, arguments);
           };
         })();
       <\/script>
     `;
+
+    html = proxyHtmlContent(html, url);
 
     if (html.includes('<head>')) {
       html = html.replace('<head>', '<head>' + instrumentationHook);
@@ -1468,26 +2782,241 @@ async function navigate(url) {
     mainIframe.srcdoc = html;
 
   } catch(err) {
-    mainIframe.srcdoc = `<div style="color:var(--red);background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy Navigation Failed</h3><p>${err.message}</p></div>`;
+    if (navTimeout) clearTimeout(navTimeout);
+    const elapsed = Math.round(performance.now() - startTime);
+    captureRequest({
+      method: 'GET',
+      url,
+      headers: { 'Host': (() => { try { return new URL(url).host; } catch(e) { return ''; } })(), 'Accept': 'text/html' },
+      body: '',
+      status: 0,
+      statusText: 'Proxy Navigation Failed',
+      responseHeaders: {},
+      responseBody: String(err && (err.stack || err.message) || err),
+      size: '-',
+      duration: elapsed + 'ms',
+      requestType: 'navigation',
+      frameUrl: url,
+      error: true
+    });
+    notify('Proxy load failed/slow; trying direct iframe fallback (hooks may be disabled)', 'info');
+    try {
+      mainIframe.removeAttribute('srcdoc');
+      mainIframe.src = url;
+    } catch(e) {
+      mainIframe.srcdoc = `<div style="color:#f87171;background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy Navigation Failed</h3><p>${escHtml(err.message)}</p><p>Direct fallback also failed: ${escHtml(e.message)}</p></div>`;
+    }
   }
 }
 
 window.addEventListener('message', event => {
-  if (event.data && event.data.type === 'IFRAME_AJAX') {
+  const data = event.data;
+  if (!data || !data.type) return;
+
+  if (data.type === 'IFRAME_SUBRESOURCE' || data.type === 'IFRAME_SUBRESOURCE_TIMING') {
     captureRequest({
-      method: event.data.method,
-      url: event.data.url,
-      headers: { 'X-Intercepted-By': 'Sandbox-DOM-Hook' },
-      body: event.data.body,
-      status: 200,
-      statusText: 'OK (Hooked)',
-      responseHeaders: { 'Content-Type': 'application/json' },
-      responseBody: '// Sub-request intercepted inside the runtime virtual environment.',
-      size: '-',
-      duration: '0ms'
+      method: data.method || 'GET',
+      url: data.url,
+      headers: data.headers || {},
+      body: data.body || '',
+      status: data.status || 200,
+      statusText: data.statusText || 'Subresource',
+      responseHeaders: data.responseHeaders || {},
+      responseBody: data.responseBody || '',
+      size: data.size || '-',
+      duration: data.duration || '0ms',
+      requestType: data.requestType || 'subresource',
+      frameUrl: data.frameUrl || '',
+      pageTitle: data.pageTitle || '',
+      initiator: data.tagName ? ('<' + data.tagName + ' ' + data.attr + '>') : ''
     });
+    return;
+  }
+
+  if (data.type === 'IFRAME_NAVIGATE') {
+    captureRequest({
+      method: 'GET',
+      url: data.url,
+      headers: { 'Referer': urlInput.value, 'User-Agent': navigator.userAgent },
+      body: '',
+      status: 200,
+      statusText: 'Navigation Intent',
+      responseHeaders: {},
+      responseBody: '[navigation intercepted: ' + (data.reason || '') + ']',
+      size: '-',
+      duration: '0ms',
+      requestType: 'navigation-intent',
+      frameUrl: data.frameUrl || '',
+      pageTitle: data.pageTitle || ''
+    });
+    return;
+  }
+
+  if (data.type === 'IFRAME_AJAX') {
+    captureRequest({
+      method: data.method,
+      url: data.url,
+      headers: Object.assign({ 'X-Intercepted-By': 'Sandbox-DOM-Hook', 'X-Request-Type': data.requestType || 'runtime' }, data.headers || {}),
+      body: data.body,
+      status: typeof data.status === 'number' ? data.status : 200,
+      statusText: data.statusText || 'OK (Hooked)',
+      responseHeaders: data.responseHeaders || {},
+      responseBody: data.responseBody || '',
+      size: typeof data.size === 'number' ? formatBytes(data.size) : (data.size || '-'),
+      duration: data.duration || '0ms',
+      requestType: data.requestType || 'runtime',
+      frameUrl: data.frameUrl || '',
+      pageTitle: data.pageTitle || '',
+      initiator: data.initiator || '',
+      fetchMeta: data.fetchMeta || {},
+      error: !!data.error
+    });
+    return;
+  }
+
+  if (data.type === 'IFRAME_CONSOLE' || data.type === 'IFRAME_ERROR') {
+    pushIframeConsoleEntry(data);
+    return;
+  }
+
+  if (data.type === 'IFRAME_STORAGE') {
+    updateIframeStorage(data);
   }
 });
+
+function pushIframeConsoleEntry(data) {
+  const entry = {
+    level: data.level || (data.type === 'IFRAME_ERROR' ? 'error' : 'log'),
+    args: data.type === 'IFRAME_ERROR' ? [data.message || 'Script error', data.filename ? (data.filename + ':' + data.lineno + ':' + data.colno) : '', data.stack || ''].filter(Boolean) : (data.args || []),
+    time: new Date(data.time || Date.now()),
+    frameUrl: data.frameUrl || '',
+    pageTitle: data.pageTitle || '',
+    stack: data.stack || ''
+  };
+  iframeConsoleEntries.push(entry);
+  if (iframeConsoleEntries.length > MAX_CONSOLE_ENTRIES) iframeConsoleEntries.shift();
+  renderBrowserConsole();
+  if (entry.level === 'error') setBrowserConsoleOpen(true);
+}
+
+function updateIframeStorage(data) {
+  iframeStorageState = {
+    cookies: data.cookies || '',
+    localStorage: data.localStorage || {},
+    sessionStorage: data.sessionStorage || {},
+    frameUrl: data.frameUrl || '',
+    pageTitle: data.pageTitle || '',
+    updatedAt: new Date(data.time || Date.now())
+  };
+  iframeStorageEvents.unshift({
+    reason: data.reason || 'snapshot',
+    extra: data.extra || {},
+    time: new Date(data.time || Date.now()),
+    frameUrl: data.frameUrl || ''
+  });
+  if (iframeStorageEvents.length > MAX_STORAGE_EVENTS) iframeStorageEvents.pop();
+  renderStorageMonitor();
+}
+
+function setBrowserConsoleOpen(open) {
+  const el = document.getElementById('browser-console');
+  if (!el) return;
+  el.classList.toggle('open', !!open);
+  if (!open) el.style.height = '34px';
+  else if (!el.style.height || el.style.height === '34px') el.style.height = '240px';
+  const toggle = document.getElementById('browser-console-toggle');
+  if (toggle) toggle.textContent = open ? '▾' : '▴';
+}
+
+function renderBrowserConsole() {
+  const pane = document.getElementById('browser-console-pane');
+  const count = document.getElementById('browser-console-count');
+  if (count) count.textContent = iframeConsoleEntries.length;
+  if (!pane) return;
+  if (!iframeConsoleEntries.length) {
+    pane.innerHTML = '<div class="console-empty">No iframe console messages yet</div>';
+    return;
+  }
+  pane.innerHTML = iframeConsoleEntries.slice().reverse().map(entry => {
+    const msg = entry.args.map(a => String(a)).join('\n');
+    const urlLine = entry.frameUrl ? '\n@ ' + entry.frameUrl : '';
+    return `
+      <div class="console-entry ${escHtml(entry.level)}">
+        <span class="console-time">${entry.time.toLocaleTimeString('en-US', { hour12:false })}</span>
+        <span class="console-level">${escHtml(entry.level)}</span>
+        <span class="console-msg">${escHtml(msg + urlLine)}</span>
+      </div>`;
+  }).join('');
+  pane.scrollTop = pane.scrollHeight;
+}
+
+function renderStorageMonitor() {
+  const pane = document.getElementById('browser-storage-pane');
+  if (!pane) return;
+  const hasSnapshot = iframeStorageState.updatedAt || iframeStorageEvents.length;
+  if (!hasSnapshot) {
+    pane.innerHTML = '<div class="storage-empty">Storage snapshot will appear after page load or click inside the browser</div>';
+    return;
+  }
+  const ls = JSON.stringify(iframeStorageState.localStorage || {}, null, 2);
+  const ss = JSON.stringify(iframeStorageState.sessionStorage || {}, null, 2);
+  const events = iframeStorageEvents.slice(0, 30).map(ev => `
+    <div class="storage-event">
+      <span>${ev.time.toLocaleTimeString('en-US', { hour12:false })}</span>
+      <span>${escHtml(ev.reason)}</span>
+      <span>${escHtml(JSON.stringify(ev.extra || {}))}</span>
+    </div>`).join('');
+  pane.innerHTML = `
+    <div class="storage-monitor-grid">
+      <div class="storage-box wide">
+        <div class="storage-box-title"><span>Document Cookie</span><span>${iframeStorageState.updatedAt ? iframeStorageState.updatedAt.toLocaleTimeString('en-US', { hour12:false }) : ''}</span></div>
+        <pre>${escHtml(iframeStorageState.cookies || '(empty)')}</pre>
+      </div>
+      <div class="storage-box">
+        <div class="storage-box-title"><span>localStorage</span><span>${Object.keys(iframeStorageState.localStorage || {}).length} keys</span></div>
+        <pre>${escHtml(ls === '{}' ? '(empty)' : ls)}</pre>
+      </div>
+      <div class="storage-box">
+        <div class="storage-box-title"><span>sessionStorage</span><span>${Object.keys(iframeStorageState.sessionStorage || {}).length} keys</span></div>
+        <pre>${escHtml(ss === '{}' ? '(empty)' : ss)}</pre>
+      </div>
+    </div>
+    <div class="storage-events">
+      <div class="storage-box-title"><span>Dynamic changes / click snapshots</span><span>${iframeStorageEvents.length}</span></div>
+      ${events || '<div class="storage-empty">No storage events</div>'}
+    </div>`;
+}
+
+(function initBrowserConsoleDrawer() {
+  const drawer = document.getElementById('browser-console');
+  const header = document.getElementById('browser-console-header');
+  const clearBtn = document.getElementById('browser-console-clear');
+  if (!drawer || !header) return;
+  header.addEventListener('click', e => {
+    if (e.target.closest('button')) return;
+    setBrowserConsoleOpen(!drawer.classList.contains('open'));
+  });
+  document.getElementById('browser-console-toggle').addEventListener('click', e => {
+    e.stopPropagation();
+    setBrowserConsoleOpen(!drawer.classList.contains('open'));
+  });
+  document.querySelectorAll('[data-browser-console-tab]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      activeBrowserConsoleTab = btn.dataset.browserConsoleTab;
+      document.querySelectorAll('[data-browser-console-tab]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.browser-console-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById(activeBrowserConsoleTab === 'storage' ? 'browser-storage-pane' : 'browser-console-pane').classList.add('active');
+      setBrowserConsoleOpen(true);
+    });
+  });
+  clearBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    iframeConsoleEntries = [];
+    renderBrowserConsole();
+  });
+})();
 
 document.getElementById('btn-go').addEventListener('click', () => navigate(urlInput.value.trim()));
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') navigate(urlInput.value.trim()); });
@@ -1495,13 +3024,13 @@ urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') navigate(urlI
 document.getElementById('btn-back').addEventListener('click', () => {
   if (browserHistoryIdx > 0) {
     browserHistoryIdx--;
-    navigate(browserHistory[browserHistoryIdx]);
+    navigate(browserHistory[browserHistoryIdx], false);
   }
 });
 document.getElementById('btn-forward').addEventListener('click', () => {
   if (browserHistoryIdx < browserHistory.length - 1) {
     browserHistoryIdx++;
-    navigate(browserHistory[browserHistoryIdx]);
+    navigate(browserHistory[browserHistoryIdx], false);
   }
 });
 document.getElementById('btn-reload').addEventListener('click', () => {
@@ -1526,8 +3055,20 @@ function captureRequest(data) {
     time: timestamp.toLocaleTimeString('en-US', { hour12: false }),
     timestamp,
     inScope: isInScope(data.url),
-    duration: data.duration || '0ms'
+    duration: data.duration || '0ms',
+    requestType: data.requestType || '',
+    frameUrl: data.frameUrl || '',
+    pageTitle: data.pageTitle || '',
+    initiator: data.initiator || '',
+    fetchMeta: data.fetchMeta || {},
+    rawRequest: data.rawRequest || '',
+    error: !!data.error
   };
+  // Apply Match & Replace rules
+  req.appliedRules = applyRewriteRulesToRequest(req).map(r => ({ type: r.type, match: r.match, replace: r.replace }));
+  // Scan response after applying response rules
+  req.appliedRules = req.appliedRules.concat(applyRewriteRulesToResponse(req).map(r => ({ type: r.type, match: r.match, replace: r.replace })));
+  req.vulns = scanVulnerabilities(req);
   requests.unshift(req);
   updateRequestsList();
   updateStats();
@@ -1559,6 +3100,8 @@ const scopeOnlyToggle = document.getElementById('scope-only-toggle');
 filterInput.addEventListener('input', updateRequestsList);
 scopeOnlyToggle.addEventListener('change', e => {
   scopeOnlyMode = e.target.checked;
+  const settingsToggle = document.getElementById('settings-scope-only');
+  if (settingsToggle) settingsToggle.checked = scopeOnlyMode;
   updateRequestsList();
 });
 
@@ -1584,15 +3127,16 @@ function updateRequestsList() {
     el.className = 'req-item' + (req.id === selectedReqId ? ' selected' : '');
     el.dataset.id = req.id;
 
-    const methodClass = 'method-' + req.method.toLowerCase();
+    const methodClass = methodClassName(req.method);
     const statusClass = req.status >= 500 ? 'status-5xx' : req.status >= 400 ? 'status-4xx' : req.status >= 300 ? 'status-3xx' : req.status >= 200 ? 'status-2xx' : 'status-pending';
     const shortUrl = req.url.replace(/^https?:\/\//, '');
     const scopeIcon = req.inScope ? '<span class="scope-badge" style="margin-left:4px;font-size:8px;">S</span>' : '';
 
+    const warningIcon = (req.vulns && req.vulns.length) ? `<span class="vuln-badge" title="${req.vulns.length} anomaly(s) detected">${req.vulns.length}</span>` : '';
     el.innerHTML = `
       <span class="req-method ${methodClass}">${req.method}</span>
-      <span class="req-status ${statusClass}">${req.status}</span>
-      <span class="req-url" title="${req.url}">${shortUrl}${scopeIcon}</span>
+      <span class="req-status ${statusClass}">${req.status}${warningIcon}</span>
+      <span class="req-url" title="${escHtml(req.url)}">${escHtml(shortUrl)}${scopeIcon}</span>
       <span class="req-time">${req.duration}</span>
       <button class="req-menu-btn" title="More options">⋯</button>
     `;
@@ -1631,7 +3175,7 @@ function showDetail(req) {
   dc.style.display = 'flex';
 
   const mb = document.getElementById('detail-method-badge');
-  mb.className = 'req-method method-' + req.method.toLowerCase();
+  mb.className = 'req-method ' + methodClassName(req.method);
   mb.textContent = req.method;
 
   document.getElementById('detail-url').textContent = req.url;
@@ -1640,12 +3184,13 @@ function showDetail(req) {
   document.getElementById('detail-status').innerHTML = `<span class="${statusClass}">${req.status} ${req.statusText}</span>`;
   document.getElementById('detail-time').textContent = req.duration;
   document.getElementById('detail-size').textContent = req.size;
-  document.getElementById('detail-scope-badge').innerHTML = req.inScope ? '<span class="scope-badge">in scope</span>' : '';
+  let badges = req.inScope ? '<span class="scope-badge">in scope</span>' : '';
+  if (req.requestType) badges += ` <span class="scope-badge" style="color:var(--blue);border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.08);">${escHtml(req.requestType)}</span>`;
+  if (req.error) badges += ` <span class="scope-badge" style="color:var(--red);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08);">error</span>`;
+  document.getElementById('detail-scope-badge').innerHTML = badges;
 
-  // raw tab
-  let rawReq = `${req.method} ${tryPathname(req.url)} HTTP/1.1\n`;
-  Object.entries(req.headers).forEach(([k, v]) => rawReq += `${k}: ${v}\n`);
-  if (req.body) rawReq += `\n${req.body}`;
+  // raw
+  let rawReq = req.rawRequest || buildRawHttpRequest(req.method, req.url, Object.entries(req.headers).map(([k,v]) => ({k,v})), req.body);
 
   let rawResp = `HTTP/1.1 ${req.status} ${req.statusText}\n`;
   Object.entries(req.responseHeaders).forEach(([k, v]) => rawResp += `${k}: ${v}\n`);
@@ -1658,7 +3203,7 @@ function showDetail(req) {
     <div class="raw-block">${escHtml(rawResp)}</div>
   `;
 
-  // headers tab
+  // headers
   let reqHeadersHtml = '<div class="section-label">Request Headers</div><table class="headers-table">';
   Object.entries(req.headers).forEach(([k, v]) => {
     reqHeadersHtml += `<tr><td>${escHtml(k)}</td><td>${escHtml(v)}</td></tr>`;
@@ -1671,22 +3216,39 @@ function showDetail(req) {
   });
   respHeadersHtml += '</table>';
 
-  document.getElementById('pane-headers').innerHTML = reqHeadersHtml + respHeadersHtml;
+  let ctxHtml = '';
+  if (req.requestType || req.frameUrl || req.pageTitle || req.initiator || Object.keys(req.fetchMeta || {}).length) {
+    ctxHtml = '<div class="section-label" style="margin-top:16px;">Runtime Context</div><table class="headers-table">';
+    const ctxRows = {
+      'Type': req.requestType || '',
+      'Frame URL': req.frameUrl || '',
+      'Page Title': req.pageTitle || '',
+      'Initiator Stack': req.initiator || '',
+      'Fetch Metadata': Object.keys(req.fetchMeta || {}).length ? JSON.stringify(req.fetchMeta, null, 2) : ''
+    };
+    Object.entries(ctxRows).forEach(([k, v]) => { if (v) ctxHtml += `<tr><td>${escHtml(k)}</td><td>${escHtml(v)}</td></tr>`; });
+    ctxHtml += '</table>';
+  }
+
+  document.getElementById('pane-headers').innerHTML = reqHeadersHtml + respHeadersHtml + ctxHtml;
 
   // req body tab
   document.getElementById('pane-request-body').innerHTML = req.body
     ? `<div class="raw-block">${escHtml(req.body)}</div>`
     : `<div class="placeholder">No request body</div>`;
 
-  // response tab
+  // response
   let responseContent = req.responseBody || '';
   try {
     const parsed = JSON.parse(responseContent);
     responseContent = JSON.stringify(parsed, null, 2);
   } catch(e) {}
   document.getElementById('pane-response').innerHTML = responseContent
-    ? `<div class="raw-block">${escHtml(responseContent)}</div>`
-    : `<div class="placeholder">No response body</div>`;
+    ? `<div class="raw-block">${escHtml(responseContent)}</div>${renderAppliedRules(req)}`
+    : `<div class="placeholder">No response body</div>${renderAppliedRules(req)}`;
+
+  // vulns
+  renderVulnsPane(req);
 
   document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.detail-pane').forEach(p => p.classList.remove('active'));
@@ -1699,7 +3261,8 @@ document.querySelectorAll('.detail-tab').forEach(tab => {
     document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.detail-pane').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('pane-' + tab.dataset.pane).classList.add('active');
+    const target = document.getElementById('pane-' + tab.dataset.pane);
+    if (target) target.classList.add('active');
   });
 });
 
@@ -1750,6 +3313,12 @@ function ctxSendToRepeater() {
   if (req) loadIntoRepeater(req);
 }
 
+function ctxAddToOrganizer() {
+  ctxMenu.classList.remove('visible');
+  const req = requests.find(r => r.id === ctxTargetId);
+  if (req) organizerSaveRequest(req);
+}
+
 function ctxCopyUrl() {
   ctxMenu.classList.remove('visible');
   const req = requests.find(r => r.id === ctxTargetId);
@@ -1794,7 +3363,7 @@ document.getElementById('btn-clear-all').addEventListener('click', () => {
 function renderScopeList() {
   const el = document.getElementById('scope-list');
   const entries = document.getElementById('scope-entries');
-  if (!scopeList.length) { el.style.display = 'none'; return; }
+  if (!scopeList.length) { el.style.display = 'none'; renderSettingsScope(); return; }
   el.style.display = 'block';
   entries.innerHTML = scopeList.map((s, i) => `
     <div class="scope-entry">
@@ -1802,6 +3371,7 @@ function renderScopeList() {
       <button class="scope-remove" onclick="removeScopeEntry(${i})">×</button>
     </div>
   `).join('');
+  renderSettingsScope();
 }
 
 function removeScopeEntry(i) {
@@ -1832,6 +3402,7 @@ function createRepeaterTab(data) {
       {k:'Accept', v:'application/json'},
     ],
     body: data ? (data.body || '') : '',
+    raw: data ? (data.rawRequest || buildRawHttpRequest(data.method, data.url, Object.entries(data.headers || {}).map(([k,v]) => ({k,v})), data.body || '')) : '',
     response: null
   };
   repTabs.push(tabData);
@@ -1866,6 +3437,7 @@ function switchRepTab(id) {
   document.getElementById('rep-method').value = tab.method;
   document.getElementById('rep-url').value = tab.url;
   document.getElementById('rep-body').value = tab.body;
+  document.getElementById('rep-raw').value = tab.raw || buildRawHttpRequest(tab.method, tab.url, tab.headers, tab.body);
 
   renderRepHeaders(tab.headers);
 
@@ -1895,6 +3467,7 @@ function clearRepEditor() {
   document.getElementById('rep-method').value = 'GET';
   document.getElementById('rep-url').value = '';
   document.getElementById('rep-body').value = '';
+  document.getElementById('rep-raw').value = '';
   renderRepHeaders([]);
 }
 
@@ -1907,8 +3480,8 @@ function renderRepHeaders(headers) {
     const row = document.createElement('div');
     row.className = 'header-row';
     row.innerHTML = `
-      <input class="header-input" placeholder="Header name" value="${escHtml(h.k)}" onchange="updateRepHeader(${i},'k',this.value)">
-      <input class="header-input" placeholder="Value" value="${escHtml(h.v)}" onchange="updateRepHeader(${i},'v',this.value)">
+      <input class="header-input" placeholder="Header name" value="${escHtml(h.k)}" oninput="updateRepHeader(${i},'k',this.value)" onchange="updateRepHeader(${i},'k',this.value)">
+      <input class="header-input" placeholder="Value" value="${escHtml(h.v)}" oninput="updateRepHeader(${i},'v',this.value)" onchange="updateRepHeader(${i},'v',this.value)">
       <button class="header-del" onclick="removeRepHeader(${i})">×</button>
     `;
     list.appendChild(row);
@@ -1924,7 +3497,10 @@ function getActiveTab() { return repTabs.find(t => t.id === activeRepTab); }
 
 function updateRepHeader(idx, key, val) {
   const tab = getActiveTab();
-  if (tab && tab.headers[idx]) tab.headers[idx][key] = val;
+  if (tab && tab.headers[idx]) {
+    tab.headers[idx][key] = val;
+    syncRepeaterTabFromFields(false);
+  }
 }
 
 function removeRepHeader(idx) {
@@ -1955,18 +3531,175 @@ document.querySelectorAll('.editor-tab').forEach(tab => {
 
 document.getElementById('btn-send').addEventListener('click', sendRepeaterRequest);
 
-async function sendRepeaterRequest() {
-  const tab = getActiveTab();
-  const method = document.getElementById('rep-method').value;
+function collectRepHeadersArray() {
+  const headers = [];
+  document.getElementById('rep-headers-list').querySelectorAll('.header-row').forEach(row => {
+    const inputs = row.querySelectorAll('.header-input');
+    const k = inputs[0].value;
+    const v = inputs[1].value;
+    if (k) headers.push({ k, v });
+  });
+  return headers;
+}
+
+function headersArrayToObject(headers) {
+  const obj = {};
+  (headers || []).forEach(h => { if (h && h.k) obj[h.k] = h.v; });
+  return obj;
+}
+
+function buildRawHttpRequest(method, url, headers, body) {
+  method = (method || 'GET').trim() || 'GET';
+  headers = headers || [];
+  body = body || '';
+  let target = url || '/';
+  let host = '';
+  try {
+    const u = new URL(url);
+    target = (u.pathname || '/') + (u.search || '');
+    host = u.host;
+  } catch(e) {
+    if (!String(target).startsWith('/')) target = target || '/';
+  }
+  const lines = [`${method} ${target} HTTP/1.1`];
+  const hasHost = headers.some(h => String(h.k || '').toLowerCase() === 'host');
+  if (host && !hasHost) lines.push(`Host: ${host}`);
+  headers.forEach(h => {
+    if (!h || !h.k) return;
+    lines.push(`${h.k}: ${h.v || ''}`);
+  });
+  return lines.join('\n') + '\n\n' + body;
+}
+
+function parseRawHttpRequest(raw, fallbackUrl) {
+  raw = String(raw || '').replace(/\r\n/g, '\n');
+  const splitIdx = raw.indexOf('\n\n');
+  const head = splitIdx >= 0 ? raw.slice(0, splitIdx) : raw;
+  const body = splitIdx >= 0 ? raw.slice(splitIdx + 2) : '';
+  const lines = head.split('\n');
+  const requestLine = (lines.shift() || '').trim();
+  const match = requestLine.match(/^(\S+)\s+(\S+)(?:\s+HTTP\/\d(?:\.\d)?)?$/i);
+  if (!match) throw new Error('Raw request line must look like: METHOD /path HTTP/1.1');
+  const method = match[1];
+  const target = match[2];
+  const headers = [];
+  let last = null;
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    if (/^[ \t]/.test(line) && last) {
+      last.v += ' ' + line.trim();
+      return;
+    }
+    const idx = line.indexOf(':');
+    if (idx === -1) return;
+    last = { k: line.slice(0, idx).trim(), v: line.slice(idx + 1).trim() };
+    headers.push(last);
+  });
+  const hostHeader = headers.find(h => h.k.toLowerCase() === 'host');
+  let url = target;
+  try {
+    url = new URL(target).href;
+  } catch(e) {
+    if (fallbackUrl) {
+      try { url = new URL(target, fallbackUrl).href; } catch(_) {}
+    }
+    if (!/^https?:\/\//i.test(url) && hostHeader) {
+      const path = target.startsWith('/') ? target : '/' + target;
+      url = 'https://' + hostHeader.v + path;
+    }
+  }
+  return { method, url, headers, body, raw };
+}
+
+function getRepeaterRequestData() {
+  const rawPaneActive = document.getElementById('editor-raw-editor').classList.contains('active');
+  const rawValue = document.getElementById('rep-raw').value;
+  if (rawPaneActive && rawValue.trim()) {
+    return parseRawHttpRequest(rawValue, document.getElementById('rep-url').value.trim());
+  }
+  const method = (document.getElementById('rep-method').value.trim() || 'GET');
   const url = document.getElementById('rep-url').value.trim();
+  const headers = collectRepHeadersArray();
   const body = document.getElementById('rep-body').value;
+  return { method, url, headers, body, raw: buildRawHttpRequest(method, url, headers, body) };
+}
+
+function parseRawIntoFields() {
+  try {
+    const parsed = parseRawHttpRequest(document.getElementById('rep-raw').value, document.getElementById('rep-url').value.trim());
+    document.getElementById('rep-method').value = parsed.method;
+    document.getElementById('rep-url').value = parsed.url;
+    document.getElementById('rep-body').value = parsed.body;
+    renderRepHeaders(parsed.headers);
+    syncRepeaterTabFromFields(true);
+    notify('Raw request parsed into fields', 'success');
+  } catch(err) {
+    notify(err.message, 'info');
+  }
+}
+
+function buildRawFromFields() {
+  const method = (document.getElementById('rep-method').value.trim() || 'GET');
+  const url = document.getElementById('rep-url').value.trim();
+  const headers = collectRepHeadersArray();
+  const body = document.getElementById('rep-body').value;
+  document.getElementById('rep-raw').value = buildRawHttpRequest(method, url, headers, body);
+  syncRepeaterTabFromFields(true);
+  notify('Raw request rebuilt from fields', 'success');
+}
+
+function syncRepeaterTabFromFields(updateLabel) {
+  const tab = getActiveTab();
+  if (!tab) return;
+  tab.method = (document.getElementById('rep-method').value.trim() || 'GET');
+  tab.url = document.getElementById('rep-url').value.trim();
+  tab.body = document.getElementById('rep-body').value;
+  tab.raw = document.getElementById('rep-raw').value;
+  tab.headers = collectRepHeadersArray();
+  if (updateLabel) {
+    tab.label = (tab.method || 'GET') + ' ' + (tab.url ? shortHost(tab.url) : 'New Request');
+    renderRepTabs();
+  }
+}
+
+['rep-method','rep-url','rep-body','rep-raw'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => syncRepeaterTabFromFields(id === 'rep-method' || id === 'rep-url'));
+  el.addEventListener('blur', () => {
+    if (id === 'rep-method') el.value = (el.value.trim() || 'GET').toUpperCase();
+    syncRepeaterTabFromFields(id === 'rep-method' || id === 'rep-url');
+  });
+});
+
+document.getElementById('btn-parse-raw').addEventListener('click', parseRawIntoFields);
+document.getElementById('btn-build-raw').addEventListener('click', buildRawFromFields);
+
+async function sendRepeaterRequest() {
+  let reqData;
+  try {
+    reqData = getRepeaterRequestData();
+  } catch(err) {
+    notify(err.message, 'info');
+    return;
+  }
+
+  const tab = getActiveTab();
+  const method = (reqData.method || 'GET').trim() || 'GET';
+  const url = (reqData.url || '').trim();
+  const body = reqData.body || '';
+  const headers = reqData.headers || [];
+  const headersObj = headersArrayToObject(headers);
+  const rawRequest = reqData.raw || buildRawHttpRequest(method, url, headers, body);
 
   if (!url) { notify('Enter a URL first', 'info'); return; }
 
   if (tab) {
     tab.method = method;
     tab.url = url;
+    tab.headers = headers;
     tab.body = body;
+    tab.raw = rawRequest;
     tab.label = method + ' ' + shortHost(url);
     renderRepTabs();
   }
@@ -1979,15 +3712,12 @@ async function sendRepeaterRequest() {
 
   const startTime = performance.now();
 
-  const headersObj = {};
-  document.getElementById('rep-headers-list').querySelectorAll('.header-row').forEach(row => {
-    const inputs = row.querySelectorAll('.header-input');
-    if (inputs[0].value) headersObj[inputs[0].value] = inputs[1].value;
-  });
-
   try {
     const fetchOptions = { method, headers: headersObj };
-    if (body && method !== 'GET' && method !== 'HEAD') fetchOptions.body = body;
+    if (body && method.toUpperCase() !== 'GET' && method.toUpperCase() !== 'HEAD') fetchOptions.body = body;
+    if (body && (method.toUpperCase() === 'GET' || method.toUpperCase() === 'HEAD')) {
+      notify('Browser fetch cannot send a body with ' + method + '; body was omitted.', 'info');
+    }
 
     const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
     const response = await fetch(proxiedUrl, fetchOptions);
@@ -1996,19 +3726,9 @@ async function sendRepeaterRequest() {
 
     const respHeaders = {};
     response.headers.forEach((v, k) => respHeaders[k] = v);
+    const sizeBytes = new Blob([respText]).size;
 
     const respData = {
-      status: response.status,
-      statusText: response.statusText,
-      headers: respHeaders,
-      body: respText,
-      duration: elapsed + 'ms',
-      size: new Blob([respText]).size,
-    };
-
-    if (tab) tab.response = respData;
-
-    captureRequest({
       method, url,
       headers: headersObj,
       body,
@@ -2016,8 +3736,29 @@ async function sendRepeaterRequest() {
       statusText: response.statusText,
       responseHeaders: respHeaders,
       responseBody: respText,
-      size: formatBytes(new Blob([respText]).size),
-      duration: elapsed + 'ms'
+      duration: elapsed + 'ms',
+      size: sizeBytes,
+    };
+
+    // Apply rewrite rules to repeater response before rendering
+    applyRewriteRulesToRequest(respData);
+    applyRewriteRulesToResponse(respData);
+    respData.vulns = scanVulnerabilities(respData);
+
+    if (tab) tab.response = respData;
+
+    captureRequest({
+      method, url,
+      headers: headersObj,
+      body,
+      rawRequest,
+      status: response.status,
+      statusText: response.statusText,
+      responseHeaders: respData.responseHeaders,
+      responseBody: respData.responseBody,
+      size: formatBytes(sizeBytes),
+      duration: elapsed + 'ms',
+      requestType: 'repeater'
     });
 
     renderRepResponse(respData);
@@ -2034,6 +3775,20 @@ async function sendRepeaterRequest() {
       isError: true
     };
     if (tab) tab.response = respData;
+    captureRequest({
+      method, url,
+      headers: headersObj,
+      body,
+      rawRequest,
+      status: 0,
+      statusText: 'Network Error',
+      responseHeaders: {},
+      responseBody: respData.body,
+      size: '-',
+      duration: elapsed + 'ms',
+      requestType: 'repeater',
+      error: true
+    });
     renderRepResponse(respData);
   }
 
@@ -2067,7 +3822,11 @@ function renderRepResponse(data) {
     const parsed = JSON.parse(bodyContent);
     bodyContent = JSON.stringify(parsed, null, 2);
   } catch(e) {}
-  document.getElementById('resp-body').innerHTML = `<div class="raw-block">${escHtml(bodyContent)}</div>`;
+  let vulnsHtml = '';
+  if (data.vulns && data.vulns.length) {
+    vulnsHtml = `<div class="section-label" style="margin-top:10px;">Passive Scan (${data.vulns.length})</div><div class="vuln-list">${data.vulns.map(v => `<div class="vuln-item severity-${v.severity}"><div class="vuln-title">[${v.severity.toUpperCase()}] ${escHtml(v.title)}</div><div class="vuln-desc">${escHtml(v.desc)}</div></div>`).join('')}</div>`;
+  }
+  document.getElementById('resp-body').innerHTML = `<div class="raw-block">${escHtml(bodyContent)}</div>${vulnsHtml}`;
 
   document.getElementById('resp-tabs').style.display = 'flex';
   document.getElementById('rep-resp-content').classList.add('visible');
@@ -2100,6 +3859,117 @@ function loadIntoRepeater(req) {
   createRepeaterTab(req);
   notify('Loaded into Repeater', 'info');
 }
+
+function methodClassName(method) {
+  return 'method-' + String(method || 'get').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function showTransformMenu(e, textarea) {
+  const menu = document.getElementById('transform-menu');
+  if (!menu) return;
+  activeTransformTextarea = textarea;
+  transformRange = { start: textarea.selectionStart, end: textarea.selectionEnd };
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 250) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 290) + 'px';
+  menu.classList.add('visible');
+}
+
+function transformString(action, input) {
+  switch(action) {
+    case 'url-encode': return encodeURIComponent(input);
+    case 'url-decode': return decodeURIComponent(input.replace(/\+/g, ' '));
+    case 'base64-encode': return btoa(unescape(encodeURIComponent(input)));
+    case 'base64-decode': return decodeURIComponent(escape(atob(input.trim())));
+    case 'html-encode': return input.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    case 'html-decode': {
+      const ta = document.createElement('textarea');
+      ta.innerHTML = input;
+      return ta.value;
+    }
+    case 'hex-encode': return Array.from(new TextEncoder().encode(input)).map(b => b.toString(16).padStart(2, '0')).join('');
+    case 'hex-decode': {
+      const clean = input.replace(/(?:0x|\s|:|-)/gi, '');
+      if (clean.length % 2) throw new Error('Hex input must have an even number of digits');
+      const bytes = new Uint8Array(clean.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+      return new TextDecoder().decode(bytes);
+    }
+    default: return input;
+  }
+}
+
+function applyTextareaTransform(action, textarea) {
+  textarea = textarea || activeTransformTextarea || (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('code-textarea') ? document.activeElement : null);
+  if (!textarea) { notify('Focus a Repeater text field first', 'info'); return; }
+  const range = (textarea === activeTransformTextarea && transformRange) ? transformRange : { start: textarea.selectionStart, end: textarea.selectionEnd };
+  const hasSelection = range.end > range.start;
+  const source = hasSelection ? textarea.value.slice(range.start, range.end) : textarea.value;
+  if (!source) { notify('Select text or type something to transform', 'info'); return; }
+  try {
+    const result = transformString(action, source);
+    if (hasSelection) {
+      textarea.value = textarea.value.slice(0, range.start) + result + textarea.value.slice(range.end);
+      textarea.focus();
+      textarea.setSelectionRange(range.start, range.start + result.length);
+    } else {
+      textarea.value = result;
+      textarea.focus();
+      textarea.setSelectionRange(0, result.length);
+    }
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    notify('Transformed: ' + action, 'success');
+  } catch(err) {
+    notify('Transform failed: ' + err.message, 'info');
+  } finally {
+    const menu = document.getElementById('transform-menu');
+    if (menu) menu.classList.remove('visible');
+  }
+}
+
+(function initTextareaTransforms() {
+  const transformMenu = document.getElementById('transform-menu');
+  document.querySelectorAll('.code-textarea').forEach(ta => {
+    ta.addEventListener('focus', () => { activeTransformTextarea = ta; });
+    ta.addEventListener('mouseup', () => { activeTransformTextarea = ta; transformRange = { start: ta.selectionStart, end: ta.selectionEnd }; });
+    ta.addEventListener('keyup', () => { activeTransformTextarea = ta; transformRange = { start: ta.selectionStart, end: ta.selectionEnd }; });
+    ta.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showTransformMenu(e, ta);
+    });
+    ta.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      const map = { u: 'url-encode', j: 'url-decode', e: 'base64-encode', b: 'base64-decode' };
+      if (map[key]) {
+        e.preventDefault();
+        activeTransformTextarea = ta;
+        transformRange = { start: ta.selectionStart, end: ta.selectionEnd };
+        applyTextareaTransform(map[key], ta);
+      }
+    });
+  });
+  if (transformMenu) {
+    transformMenu.querySelectorAll('[data-transform-action]').forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        applyTextareaTransform(item.dataset.transformAction);
+      });
+    });
+  }
+  document.querySelectorAll('[data-transform-btn]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const toolbar = btn.closest('.transform-toolbar');
+      const targetId = toolbar && toolbar.dataset.transformTarget;
+      const target = targetId ? document.getElementById(targetId) : activeTransformTextarea;
+      activeTransformTextarea = target;
+      if (target) transformRange = { start: target.selectionStart, end: target.selectionEnd };
+      applyTextareaTransform(btn.dataset.transformBtn, target);
+    });
+  });
+  document.addEventListener('click', e => {
+    if (transformMenu && !e.target.closest('#transform-menu')) transformMenu.classList.remove('visible');
+  });
+})();
 
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2139,9 +4009,939 @@ function notify(msg, type) {
   setTimeout(() => el.remove(), 2500);
 }
 
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+function addVisitedSite(url) {
+  const item = { url, time: new Date().toISOString() };
+  siteHistory = siteHistory.filter(h => h.url !== url);
+  siteHistory.unshift(item);
+  siteHistory = siteHistory.slice(0, 60);
+  renderSiteHistory();
+}
+
+function renderSiteHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  if (!siteHistory.length) {
+    list.innerHTML = '<div class="console-empty">No history yet</div>';
+    return;
+  }
+  list.innerHTML = siteHistory.map((item, i) => `
+    <div class="history-item" onclick="navigateFromHistory(${i})" title="${escHtml(item.url)}">
+      <span class="history-url">${escHtml(item.url)}</span>
+      <span class="history-time">${new Date(item.time).toLocaleTimeString('en-US', { hour12:false })}</span>
+    </div>`).join('');
+}
+
+function navigateFromHistory(index) {
+  const item = siteHistory[index];
+  if (!item) return;
+  toggleHistory(false);
+  navigate(item.url);
+}
+
+function clearBrowserHistory() {
+  siteHistory = [];
+  browserHistory = [];
+  browserHistoryIdx = -1;
+  renderSiteHistory();
+}
+
+function toggleHistory(force) {
+  const history = document.getElementById('history-popover');
+  const settings = document.getElementById('settings-popover');
+  if (!history) return;
+  if (settings) settings.classList.remove('visible');
+  const show = typeof force === 'boolean' ? force : !history.classList.contains('visible');
+  history.classList.toggle('visible', show);
+  if (show) renderSiteHistory();
+}
+
+function toggleSettings(force) {
+  const settings = document.getElementById('settings-popover');
+  const history = document.getElementById('history-popover');
+  if (!settings) return;
+  if (history) history.classList.remove('visible');
+  const show = typeof force === 'boolean' ? force : !settings.classList.contains('visible');
+  settings.classList.toggle('visible', show);
+  if (show) {
+    const t = document.getElementById('settings-scope-only');
+    if (t) t.checked = scopeOnlyMode;
+    renderSettingsScope();
+    renderRewriteRules();
+  }
+}
+
+function renderSettingsScope() {
+  const list = document.getElementById('settings-scope-list');
+  if (!list) return;
+  if (!scopeList.length) {
+    list.innerHTML = '<div class="console-empty">Scope is empty</div>';
+    return;
+  }
+  list.innerHTML = scopeList.map((s, i) => `
+    <div class="settings-scope-entry">
+      <span>${escHtml(s)}</span>
+      <button class="scope-remove" onclick="removeScopeEntry(${i})">×</button>
+    </div>`).join('');
+}
+
+function addScopeFromSettings() {
+  const input = document.getElementById('settings-scope-input');
+  if (!input) return;
+  let val = input.value.trim();
+  if (!val) return;
+  try {
+    if (/^https?:\/\//i.test(val)) val = new URL(val).host;
+  } catch(e) {}
+  if (!scopeList.includes(val)) {
+    scopeList.push(val);
+    requests.forEach(r => r.inScope = isInScope(r.url));
+    updateRequestsList();
+    renderScopeList();
+    renderSettingsScope();
+    notify('Added to scope: ' + val, 'success');
+  }
+  input.value = '';
+}
+
+function initHeaderPopovers() {
+  const h = document.getElementById('history-btn');
+  const st = document.getElementById('settings-btn');
+  const stScope = document.getElementById('settings-scope-only');
+  const stInput = document.getElementById('settings-scope-input');
+  if (h) h.addEventListener('click', e => { e.stopPropagation(); toggleHistory(); });
+  if (st) st.addEventListener('click', e => { e.stopPropagation(); toggleSettings(); });
+  if (stScope) stScope.addEventListener('change', e => {
+    scopeOnlyMode = e.target.checked;
+    scopeOnlyToggle.checked = scopeOnlyMode;
+    updateRequestsList();
+  });
+  if (stInput) stInput.addEventListener('keydown', e => { if (e.key === 'Enter') addScopeFromSettings(); });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.header-status')) {
+      toggleHistory(false);
+      toggleSettings(false);
+    }
+  });
+}
+
+// organizer
+function deepClone(obj) {
+  try { return JSON.parse(JSON.stringify(obj)); } catch(e) { return obj; }
+}
+
+function safeStorageGet(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch(e) { return fallback; }
+}
+
+function safeStorageSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+}
+
+function loadOrganizerStore() {
+  organizerItems = safeStorageGet('px_hook_organizer_items', []);
+  renderOrganizer();
+}
+
+function saveOrganizerStore() {
+  safeStorageSet('px_hook_organizer_items', organizerItems);
+}
+
+function normalizeRequestForSave(req) {
+  const clone = deepClone(req);
+  clone.savedAt = new Date().toISOString();
+  clone.note = clone.note || '';
+  clone.rawRequest = clone.rawRequest || buildRawHttpRequest(clone.method, clone.url, Object.entries(clone.headers || {}).map(([k,v]) => ({k,v})), clone.body || '');
+  clone.rawResponse = buildRawHttpResponse(clone.status, clone.statusText, clone.responseHeaders || {}, clone.responseBody || '');
+  clone.organizerId = 'org-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  return clone;
+}
+
+function buildRawHttpResponse(status, statusText, headers, body) {
+  let raw = `HTTP/1.1 ${status || 0} ${statusText || ''}\n`;
+  Object.entries(headers || {}).forEach(([k, v]) => raw += `${k}: ${v}\n`);
+  return raw + '\n' + (body || '');
+}
+
+function organizerSaveRequest(req) {
+  if (!req) return;
+  const saved = normalizeRequestForSave(req);
+  organizerItems.unshift(saved);
+  selectedOrganizerId = saved.organizerId;
+  saveOrganizerStore();
+  renderOrganizer();
+  notify('Saved to Organizer', 'success');
+}
+
+function addSelectedToOrganizer() {
+  const req = requests.find(r => r.id === selectedReqId);
+  if (!req) { notify('Select a request first', 'info'); return; }
+  organizerSaveRequest(req);
+}
+
+function renderOrganizer() {
+  const list = document.getElementById('organizer-list');
+  if (!list) return;
+  const filterEl = document.getElementById('organizer-filter');
+  const filter = (filterEl && filterEl.value || '').toLowerCase();
+  const visible = organizerItems.filter(item => !filter || [item.method, item.url, item.status, item.note, item.savedAt].join(' ').toLowerCase().includes(filter));
+  if (!visible.length) {
+    list.innerHTML = '<div class="detail-empty"><span>No saved messages</span></div>';
+  } else {
+    list.innerHTML = visible.map(item => `
+      <div class="tool-list-item ${item.organizerId === selectedOrganizerId ? 'active' : ''}" onclick="selectOrganizerItem('${item.organizerId}')">
+        <div class="tool-list-item-title"><span class="req-method ${methodClassName(item.method)}">${escHtml(item.method)}</span> ${escHtml(item.url || '')}</div>
+        <div class="tool-list-item-meta">${escHtml(item.status)} ${escHtml(item.statusText || '')} · ${escHtml(new Date(item.savedAt).toLocaleString())}</div>
+      </div>`).join('');
+  }
+  if (!selectedOrganizerId && organizerItems[0]) selectedOrganizerId = organizerItems[0].organizerId;
+  renderOrganizerDetail();
+}
+
+function selectOrganizerItem(id) {
+  saveOrganizerNote();
+  selectedOrganizerId = id;
+  renderOrganizer();
+}
+
+function getOrganizerItem() {
+  return organizerItems.find(i => i.organizerId === selectedOrganizerId);
+}
+
+function renderOrganizerDetail() {
+  const item = getOrganizerItem();
+  const note = document.getElementById('organizer-note');
+  const raw = document.getElementById('organizer-raw');
+  const meta = document.getElementById('organizer-meta');
+  if (!note || !raw || !meta) return;
+  if (!item) {
+    note.value = '';
+    raw.textContent = 'Select a saved message';
+    meta.textContent = '';
+    return;
+  }
+  note.value = item.note || '';
+  raw.textContent = (item.rawRequest || '') + '\n\n--- RESPONSE ---\n' + (item.rawResponse || '');
+  meta.textContent = `${item.method} · ${item.status} · ${shortHost(item.url || '')}`;
+}
+
+function saveOrganizerNote() {
+  const item = getOrganizerItem();
+  const note = document.getElementById('organizer-note');
+  if (item && note) {
+    item.note = note.value;
+    saveOrganizerStore();
+  }
+}
+
+function clearOrganizer() {
+  organizerItems = [];
+  selectedOrganizerId = null;
+  saveOrganizerStore();
+  renderOrganizer();
+  notify('Organizer cleared', 'info');
+}
+
+function copyOrganizerRaw() {
+  const item = getOrganizerItem();
+  if (!item) return;
+  copyToClipboard((item.rawRequest || '') + '\n\n--- RESPONSE ---\n' + (item.rawResponse || ''));
+}
+
+function organizerToRepeater() {
+  const item = getOrganizerItem();
+  if (!item) return;
+  loadIntoRepeater(item);
+}
+
+function runDecoder() {
+  const input = document.getElementById('decoder-input').value;
+  const op = document.getElementById('decoder-op').value;
+  try {
+    document.getElementById('decoder-output').value = transformString(op, input);
+  } catch(err) { notify('Decoder failed: ' + err.message, 'info'); }
+}
+
+function autoDecode() {
+  let text = document.getElementById('decoder-input').value;
+  const steps = [];
+  for (let i = 0; i < 5; i++) {
+    let changed = false;
+    try {
+      const u = decodeURIComponent(text.replace(/\+/g, ' '));
+      if (u !== text) { text = u; steps.push('URL Decode'); changed = true; }
+    } catch(e) {}
+    try {
+      const compact = text.trim();
+      if (compact.length >= 4 && compact.length % 4 === 0 && /^[A-Za-z0-9+/=_-]+$/.test(compact)) {
+        const b64 = compact.replace(/-/g, '+').replace(/_/g, '/');
+        const b = decodeURIComponent(escape(atob(b64)));
+        if (b && b !== text && /[\x09\x0a\x0d\x20-\x7e]/.test(b)) { text = b; steps.push('Base64 Decode'); changed = true; }
+      }
+    } catch(e) {}
+    if (!changed) break;
+  }
+  document.getElementById('decoder-output').value = text;
+  notify(steps.length ? 'Auto decoded: ' + steps.join(' → ') : 'No obvious encoding detected', 'info');
+}
+
+function swapDecoder() {
+  const a = document.getElementById('decoder-input');
+  const b = document.getElementById('decoder-output');
+  const tmp = a.value; a.value = b.value; b.value = tmp;
+}
+
+function clearDecoder() {
+  document.getElementById('decoder-input').value = '';
+  document.getElementById('decoder-output').value = '';
+}
+
+function loadComparerFromSelection() {
+  const req = requests.find(r => r.id === selectedReqId);
+  if (!req) { notify('Select a request in Intercept first', 'info'); return; }
+  document.getElementById('compare-left').value = req.rawRequest || buildRawHttpRequest(req.method, req.url, Object.entries(req.headers || {}).map(([k,v]) => ({k,v})), req.body || '');
+  document.getElementById('compare-right').value = buildRawHttpResponse(req.status, req.statusText, req.responseHeaders || {}, req.responseBody || '');
+  runComparer();
+}
+
+function runComparer() {
+  const left = document.getElementById('compare-left').value.split(/\r?\n/);
+  const right = document.getElementById('compare-right').value.split(/\r?\n/);
+  const max = Math.max(left.length, right.length);
+  let html = '';
+  for (let i = 0; i < max; i++) {
+    const l = left[i] ?? '';
+    const r = right[i] ?? '';
+    const same = l === r;
+    html += `<div class="diff-line"><span class="ln">${i + 1}</span><span class="${same ? 'diff-same' : 'diff-del'}">${escHtml(l)}</span><span class="${same ? 'diff-same' : 'diff-add'}">${escHtml(r)}</span></div>`;
+  }
+  document.getElementById('compare-output').innerHTML = html || '<div class="console-empty">Nothing to compare</div>';
+}
+
+function loadIntruderFromRepeater() {
+  const raw = document.getElementById('rep-raw').value || buildRawHttpRequest(document.getElementById('rep-method').value, document.getElementById('rep-url').value, collectRepHeadersArray(), document.getElementById('rep-body').value);
+  document.getElementById('intruder-raw').value = raw.includes('§FUZZ§') ? raw : raw.replace(/(\?|&|=)([^&\s]{1,80})/, '$1§FUZZ§');
+  notify('Loaded Repeater request into Intruder. Move §FUZZ§ where you want payloads inserted.', 'info');
+}
+
+function markIntruderSelection() {
+  const ta = document.getElementById('intruder-raw');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  if (end <= start) { notify('Select text in the Intruder request to wrap', 'info'); return; }
+  ta.value = ta.value.slice(0, start) + '§FUZZ§' + ta.value.slice(end);
+  ta.focus();
+  ta.setSelectionRange(start, start + 6);
+}
+
+function sanitizeFetchHeaders(obj) {
+  const forbidden = new Set(['host','content-length','connection','origin','referer','user-agent','cookie','sec-fetch-site','sec-fetch-mode','sec-fetch-dest']);
+  const out = {};
+  Object.entries(obj || {}).forEach(([k, v]) => { if (!forbidden.has(k.toLowerCase())) out[k] = v; });
+  return out;
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function startIntruder() {
+  if (intruderRunning) return;
+  const rawTemplate = document.getElementById('intruder-raw').value;
+  const payloads = document.getElementById('intruder-payloads').value.split(/\r?\n/).filter(Boolean);
+  const delay = Math.max(0, parseInt(document.getElementById('intruder-delay').value, 10) || 0);
+  const hasFuzz = rawTemplate.includes('§FUZZ§');
+  const hasBurpMarkers = /§[^§]+§/.test(rawTemplate);
+  if (!hasFuzz && !hasBurpMarkers) { notify('Add §FUZZ§ marker to the request first', 'info'); return; }
+  if (!payloads.length) { notify('Add at least one payload', 'info'); return; }
+  intruderRunning = true;
+  document.getElementById('intruder-start').disabled = true;
+  document.getElementById('intruder-results').innerHTML = '';
+  const status = document.getElementById('intruder-status');
+  for (let i = 0; i < payloads.length && intruderRunning; i++) {
+    const payload = payloads[i];
+    status.textContent = `running ${i + 1}/${payloads.length}`;
+    const raw = hasFuzz ? rawTemplate.split('§FUZZ§').join(payload) : rawTemplate.replace(/§[^§]+§/g, payload);
+    let parsed;
+    try { parsed = parseRawHttpRequest(raw, document.getElementById('rep-url').value.trim()); }
+    catch(err) { appendIntruderResult(i, payload, 'PARSE ERR', '-', '-', err.message); continue; }
+    const headersObj = sanitizeFetchHeaders(headersArrayToObject(parsed.headers));
+    const started = performance.now();
+    try {
+      const options = { method: parsed.method, headers: headersObj };
+      if (parsed.body && !['GET','HEAD'].includes(parsed.method.toUpperCase())) options.body = parsed.body;
+      const res = await fetch(CORS_PROXY + encodeURIComponent(parsed.url), options);
+      const text = await res.text();
+      const elapsed = Math.round(performance.now() - started) + 'ms';
+      appendIntruderResult(i, payload, res.status + ' ' + res.statusText, text.length, elapsed, '');
+      const respHeaders = {}; res.headers.forEach((v,k) => respHeaders[k] = v);
+      captureRequest({ method: parsed.method, url: parsed.url, headers: headersObj, body: parsed.body, rawRequest: raw, status: res.status, statusText: res.statusText, responseHeaders: respHeaders, responseBody: text.slice(0, 120000), size: formatBytes(new Blob([text]).size), duration: elapsed, requestType: 'intruder' });
+    } catch(err) {
+      appendIntruderResult(i, payload, 'ERR', '-', Math.round(performance.now() - started) + 'ms', err.message);
+    }
+    if (delay && i < payloads.length - 1) await sleep(delay);
+  }
+  intruderRunning = false;
+  document.getElementById('intruder-start').disabled = false;
+  status.textContent = 'stopped';
+}
+
+function stopIntruder() { intruderRunning = false; }
+
+function appendIntruderResult(i, payload, status, length, time, title) {
+  const tr = document.createElement('tr');
+  tr.title = title || '';
+  tr.innerHTML = `<td>${i + 1}</td><td>${escHtml(payload)}</td><td>${escHtml(status)}</td><td>${escHtml(length)}</td><td>${escHtml(time)}</td>`;
+  document.getElementById('intruder-results').appendChild(tr);
+}
+
+function loadSequencerFromSelection() {
+  const req = requests.find(r => r.id === selectedReqId);
+  if (!req) { notify('Select a request first', 'info'); return; }
+  const candidates = [];
+  Object.entries(req.headers || {}).forEach(([k, v]) => { if (/cookie|authorization|token|session/i.test(k)) candidates.push(String(v)); });
+  Object.entries(req.responseHeaders || {}).forEach(([k, v]) => { if (/set-cookie|token|session/i.test(k)) candidates.push(String(v)); });
+  document.getElementById('sequencer-input').value = candidates.join('\n');
+  runSequencer();
+}
+
+function shannonEntropy(str) {
+  if (!str) return 0;
+  const counts = {};
+  for (const ch of str) counts[ch] = (counts[ch] || 0) + 1;
+  let h = 0;
+  Object.values(counts).forEach(c => { const p = c / str.length; h -= p * Math.log2(p); });
+  return h;
+}
+
+function stddev(values) {
+  if (!values.length) return 0;
+  const avg = values.reduce((a,b)=>a+b,0) / values.length;
+  return Math.sqrt(values.reduce((a,b)=>a + Math.pow(b - avg, 2), 0) / values.length);
+}
+
+function runSequencer() {
+  const tokens = document.getElementById('sequencer-input').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const out = document.getElementById('sequencer-output');
+  if (!tokens.length) { out.innerHTML = '<div class="console-empty">No tokens to analyze</div>'; return; }
+  const joined = tokens.join('');
+  const lengths = tokens.map(t => t.length);
+  const unique = new Set(tokens).size;
+  const avgLen = lengths.reduce((a,b)=>a+b,0) / lengths.length;
+  const entropyPerChar = shannonEntropy(joined);
+  const bitsPerToken = entropyPerChar * avgLen;
+  const chars = {};
+  for (const ch of joined) chars[ch] = (chars[ch] || 0) + 1;
+  const alphabet = Object.keys(chars).length;
+  const expected = joined.length / alphabet;
+  const chi = Object.values(chars).reduce((a, c) => a + Math.pow(c - expected, 2) / expected, 0);
+  const classes = {
+    lower: (joined.match(/[a-z]/g) || []).length,
+    upper: (joined.match(/[A-Z]/g) || []).length,
+    digit: (joined.match(/[0-9]/g) || []).length,
+    symbol: (joined.match(/[^a-zA-Z0-9]/g) || []).length
+  };
+  const verdict = bitsPerToken >= 128 && unique === tokens.length ? 'strong-looking' : bitsPerToken >= 64 ? 'moderate-looking' : 'weak / needs review';
+  const table = Object.entries(chars).sort((a,b)=>b[1]-a[1]).slice(0, 80).map(([ch,c]) => `<tr><td>${escHtml(ch === ' ' ? '[space]' : ch)}</td><td>${c}</td><td>${((c / joined.length) * 100).toFixed(2)}%</td></tr>`).join('');
+  out.innerHTML = `
+    <div class="metric-grid">
+      <div class="metric-card"><span>Tokens</span><strong>${tokens.length}</strong></div>
+      <div class="metric-card"><span>Unique</span><strong>${unique}/${tokens.length}</strong></div>
+      <div class="metric-card"><span>Avg length</span><strong>${avgLen.toFixed(1)}</strong></div>
+      <div class="metric-card"><span>Length stdev</span><strong>${stddev(lengths).toFixed(2)}</strong></div>
+      <div class="metric-card"><span>Entropy / char</span><strong>${entropyPerChar.toFixed(3)}</strong></div>
+      <div class="metric-card"><span>Est. bits / token</span><strong>${bitsPerToken.toFixed(1)}</strong></div>
+      <div class="metric-card"><span>Alphabet</span><strong>${alphabet}</strong></div>
+      <div class="metric-card"><span>Verdict</span><strong style="font-size:14px;">${verdict}</strong></div>
+    </div>
+    <div class="raw-block">Classes: lower=${classes.lower}, upper=${classes.upper}, digit=${classes.digit}, symbol=${classes.symbol}\nChi-square roughness: ${chi.toFixed(2)} (lower is more uniform for the observed alphabet)</div>
+    <table class="tool-table" style="margin-top:12px;"><thead><tr><th>Char</th><th>Count</th><th>%</th></tr></thead><tbody>${table}</tbody></table>`;
+}
+
+function importIntruderPayloadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result || '').replace(/\r\n/g, '\n');
+    const ta = document.getElementById('intruder-payloads');
+    if (!ta) return;
+    const existing = ta.value.trim();
+    ta.value = existing ? existing + '\n' + text.trim() : text.trim();
+    const count = ta.value.split(/\r?\n/).filter(Boolean).length;
+    notify('Imported payload file: ' + count + ' total payloads', 'success');
+  };
+  reader.onerror = () => notify('Could not read payload file', 'info');
+  reader.readAsText(file);
+}
+
+function initTooling() {
+  loadOrganizerStore();
+  const orgFilter = document.getElementById('organizer-filter');
+  const orgNote = document.getElementById('organizer-note');
+  if (orgFilter) orgFilter.addEventListener('input', renderOrganizer);
+  if (orgNote) orgNote.addEventListener('input', saveOrganizerNote);
+  const intruderFile = document.getElementById('intruder-file-input');
+  if (intruderFile) intruderFile.addEventListener('change', e => {
+    importIntruderPayloadFile(e.target.files && e.target.files[0]);
+    e.target.value = '';
+  });
+  ['decoder-input','compare-left','compare-right'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.classList) el.classList.add('code-textarea');
+  });
+}
+
+function initToolLayoutSplitters() {
+  document.querySelectorAll('.tool-layout').forEach(layout => {
+    if (layout.dataset.splittersReady === '1') return;
+    layout.dataset.splittersReady = '1';
+    const panes = Array.from(layout.children).filter(el => el.classList && (el.classList.contains('tool-col') || el.classList.contains('tool-sidebar')));
+    for (let i = panes.length - 1; i > 0; i--) {
+      const splitter = document.createElement('div');
+      splitter.className = 'splitter vertical tool-splitter';
+      splitter.title = 'Drag to resize panes';
+      layout.insertBefore(splitter, panes[i]);
+      const prev = panes[i - 1];
+      splitter.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        splitter.classList.add('dragging');
+        document.body.classList.add('resizing-panels');
+        const rect = prev.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startW = rect.width;
+        const startH = rect.height;
+        function move(ev) {
+          const mobile = window.matchMedia('(max-width: 700px)').matches || getComputedStyle(layout).flexDirection === 'column';
+          if (mobile) {
+            const next = clamp(startH + (ev.clientY - startY), 110, Math.round(window.innerHeight * .7));
+            prev.style.flex = '0 0 ' + next + 'px';
+            prev.style.height = next + 'px';
+          } else {
+            const next = clamp(startW + (ev.clientX - startX), 180, Math.round(window.innerWidth * .75));
+            prev.style.flex = '0 0 ' + next + 'px';
+            prev.style.width = next + 'px';
+          }
+        }
+        function up() {
+          splitter.classList.remove('dragging');
+          document.body.classList.remove('resizing-panels');
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        }
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
+    }
+  });
+}
+
+function initResizablePanels() {
+  function dragSplitter(splitter, pane, mode) {
+    if (!splitter || !pane) return;
+    splitter.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      splitter.classList.add('dragging');
+      document.body.classList.add('resizing-panels');
+      const rect = pane.getBoundingClientRect();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startW = rect.width;
+      const startH = rect.height;
+      const mobile = window.matchMedia('(max-width: 700px)').matches;
+      function move(ev) {
+        if (mode === 'width' && !mobile) {
+          const max = Math.round(window.innerWidth * 0.72);
+          const next = clamp(startW + (ev.clientX - startX), 220, max);
+          pane.style.width = next + 'px';
+          pane.style.flex = '0 0 ' + next + 'px';
+        } else {
+          const max = Math.round(window.innerHeight * 0.72);
+          const next = clamp(startH + (ev.clientY - startY), 140, max);
+          pane.style.height = next + 'px';
+          pane.style.flex = '0 0 ' + next + 'px';
+        }
+      }
+      function up() {
+        splitter.classList.remove('dragging');
+        document.body.classList.remove('resizing-panels');
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+  }
+
+  dragSplitter(document.getElementById('intercept-splitter'), document.querySelector('.requests-sidebar'), 'width');
+  dragSplitter(document.getElementById('repeater-splitter'), document.querySelector('.repeater-request-pane'), 'width');
+
+  const consoleResizer = document.getElementById('browser-console-resizer');
+  const consoleDrawer = document.getElementById('browser-console');
+  if (consoleResizer && consoleDrawer) {
+    consoleResizer.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      setBrowserConsoleOpen(true);
+      consoleResizer.classList.add('dragging');
+      document.body.classList.add('resizing-panels');
+      const startY = e.clientY;
+      const startH = consoleDrawer.getBoundingClientRect().height || 240;
+      function move(ev) {
+        const max = Math.round(window.innerHeight * 0.68);
+        const next = clamp(startH + (startY - ev.clientY), 80, max);
+        consoleDrawer.style.height = next + 'px';
+      }
+      function up() {
+        consoleResizer.classList.remove('dragging');
+        document.body.classList.remove('resizing-panels');
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+  }
+
+  const detailResizer = document.getElementById('detail-header-resizer');
+  const detailHeader = document.querySelector('.detail-header');
+  if (detailResizer && detailHeader) {
+    detailResizer.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      detailResizer.classList.add('dragging');
+      document.body.classList.add('resizing-panels');
+      const startY = e.clientY;
+      const startH = detailHeader.getBoundingClientRect().height;
+      function move(ev) {
+        const next = clamp(startH + (ev.clientY - startY), 64, 230);
+        detailHeader.style.height = next + 'px';
+      }
+      function up() {
+        detailResizer.classList.remove('dragging');
+        document.body.classList.remove('resizing-panels');
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+  }
+  initToolLayoutSplitters();
+}
+
+
+// ---------- REWRITE RULES ----------
+let rewriteRules = [];
+
+function loadRewriteRules() {
+  rewriteRules = safeStorageGet('px_hook_rewrite_rules', []);
+}
+function saveRewriteRules() {
+  safeStorageSet('px_hook_rewrite_rules', rewriteRules);
+}
+function addRewriteRule() {
+  rewriteRules.push({ id: 'rr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,6), enabled: true, type: 'resp-body', match: '', replace: '' });
+  saveRewriteRules();
+  renderRewriteRules();
+}
+function removeRewriteRule(id) {
+  rewriteRules = rewriteRules.filter(r => r.id !== id);
+  saveRewriteRules();
+  renderRewriteRules();
+}
+function updateRewriteRule(id, key, val) {
+  const r = rewriteRules.find(x => x.id === id);
+  if (!r) return;
+  r[key] = val;
+  saveRewriteRules();
+}
+function toggleRewriteRule(id) {
+  const r = rewriteRules.find(x => x.id === id);
+  if (r) { r.enabled = !r.enabled; saveRewriteRules(); renderRewriteRules(); }
+}
+function renderRewriteRules() {
+  const list = document.getElementById('rewrite-rules-list');
+  if (!list) return;
+  if (!rewriteRules.length) {
+    list.innerHTML = '<div class="console-empty" style="padding:8px 0;">No rules yet. Click + to add.</div>';
+    return;
+  }
+  list.innerHTML = rewriteRules.map(r => {
+    const activeClass = r.enabled ? 'rewrite-rule-active' : 'rewrite-rule-inactive';
+    return `<div class="rewrite-rule-entry ${activeClass}">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" class="rewrite-rule-checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleRewriteRule('${r.id}')">
+        <select onchange="updateRewriteRule('${r.id}', 'type', this.value)" onclick="event.stopPropagation()">
+          <option value="url" ${r.type === 'url' ? 'selected' : ''}>URL</option>
+          <option value="req-header" ${r.type === 'req-header' ? 'selected' : ''}>Req Header</option>
+          <option value="req-body" ${r.type === 'req-body' ? 'selected' : ''}>Req Body</option>
+          <option value="resp-header" ${r.type === 'resp-header' ? 'selected' : ''}>Resp Header</option>
+          <option value="resp-body" ${r.type === 'resp-body' ? 'selected' : ''}>Resp Body</option>
+        </select>
+      </label>
+      <input value="${escHtml(r.match)}" placeholder="match" onchange="updateRewriteRule('${r.id}', 'match', this.value)" onclick="event.stopPropagation()">
+      <input value="${escHtml(r.replace)}" placeholder="replace" onchange="updateRewriteRule('${r.id}', 'replace', this.value)" onclick="event.stopPropagation()">
+      <button onclick="event.stopPropagation(); removeRewriteRule('${r.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function makeRegex(pattern) {
+  try {
+    if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
+      const last = pattern.lastIndexOf('/');
+      return new RegExp(pattern.slice(1, last), pattern.slice(last + 1));
+    }
+    return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  } catch (e) { return null; }
+}
+
+function applyRewriteRulesToRequest(req) {
+  const applied = [];
+  for (const rule of rewriteRules) {
+    if (!rule.enabled || !rule.match) continue;
+    const re = makeRegex(rule.match);
+    if (!re) continue;
+    if (rule.type === 'url' && re.test(req.url)) {
+      req.url = req.url.replace(re, rule.replace || '');
+      applied.push(rule);
+    } else if (rule.type === 'req-header') {
+      const headers = req.headers || {};
+      for (const k of Object.keys(headers)) {
+        if (re.test(k) || re.test(headers[k])) {
+          const parts = (rule.replace || '').split(':');
+          if (rule.replace && parts.length >= 2) {
+            const newKey = parts[0].trim();
+            const newVal = parts.slice(1).join(':').trim();
+            delete headers[k];
+            headers[newKey] = newVal;
+          } else {
+            delete headers[k];
+          }
+          applied.push(rule);
+        }
+      }
+    } else if (rule.type === 'req-body' && req.body && re.test(req.body)) {
+      req.body = req.body.replace(re, rule.replace || '');
+      applied.push(rule);
+    }
+  }
+  return applied;
+}
+
+function applyRewriteRulesToResponse(req) {
+  const applied = [];
+  for (const rule of rewriteRules) {
+    if (!rule.enabled || !rule.match) continue;
+    const re = makeRegex(rule.match);
+    if (!re) continue;
+    if (rule.type === 'resp-header') {
+      const headers = req.responseHeaders || {};
+      for (const k of Object.keys(headers)) {
+        if (re.test(k) || re.test(headers[k])) {
+          const parts = (rule.replace || '').split(':');
+          if (rule.replace && parts.length >= 2) {
+            const newKey = parts[0].trim();
+            const newVal = parts.slice(1).join(':').trim();
+            delete headers[k];
+            headers[newKey] = newVal;
+          } else {
+            delete headers[k];
+          }
+          applied.push(rule);
+        }
+      }
+    } else if (rule.type === 'resp-body' && req.responseBody && re.test(req.responseBody)) {
+      req.responseBody = req.responseBody.replace(re, rule.replace || '');
+      applied.push(rule);
+    }
+  }
+  return applied;
+}
+
+// ---------- VULNERABILITY / ANOMALY SCANNER ----------
+const SQL_ERROR_PATTERNS = [
+  /SQL syntax.*?MySQL/i, /Warning.*?\Wmysqli?_/i, /MySQL server.*?gone away/i,
+  /PostgreSQL.*?ERROR/i, /ODBC SQL Server Driver/i, /SQLServer JDBC Driver/i,
+  /Oracle.*?ORA-\d{5}/i, /SQLITE_ERROR/i, /sqlite3\.OperationalError/i,
+  /Syntax error in string in query expression/i, /You have an error in your SQL syntax/i,
+  /Unclosed quotation mark/i, /Microsoft OLE DB Provider for SQL Server/i
+];
+const STACK_TRACE_PATTERNS = [
+  /at\s+[\w.]+\s*\(.*?:\d+:\d+\)/, /\/[\w\-.]+\.[tj]s:\d+:\d+/,
+  /Traceback \(most recent call last\)/i, /Exception in thread /i,
+  /java\.lang\.[A-Za-z]+Exception/i, /Error:\s+.+\n\s*at\s+/,
+  /php:\s+\d+\s+Stack trace:/i
+];
+const PATH_LEAK_PATTERNS = [
+  /(\/var\/www\/[^\s"'<>]+)/gi, /(\/home\/[^\s"'<>]+)/gi, /(C:\\\\[^\s"'<>]+)/gi,
+  /(\\\\w+\\[^\s"'<>]+)/gi, /([a-zA-Z]:\\[^\s"'<>]+)/gi,
+  /(File "[^"]+", line \d+)/g, /(Module "[^"]+")/g
+];
+const VERSION_LEAK_PATTERNS = [
+  /(Server:\s*[^\r\n]+)/i, /(X-Powered-By:\s*[^\r\n]+)/i, /(X-AspNet-Version:\s*[^\r\n]+)/i,
+  /(X-Generator:\s*[^\r\n]+)/i, /(nginx\/\d+\.\d+)/i, /(Apache\/\d+\.\d+)/i,
+  /(PHP\/\d+\.\d+)/i, /(Express\/\d+)/i, /(Django\/\d+)/i, /(Rails\/\d)/i
+];
+const TODO_FIXME_PATTERNS = [/TODO:/gi, /FIXME:/gi, /HACK:/gi, /XXX:/gi, /BUG:/gi];
+
+function scanVulnerabilities(req) {
+  const vulns = [];
+  const h = req.responseHeaders || {};
+  const ct = String(h['content-type'] || h['Content-Type'] || '').toLowerCase();
+  const isHtml = ct.includes('html') || (!ct && req.url && !/\.(js|css|json|xml|png|jpg|jpeg|gif|svg|woff|ttf|eot|ico)$/i.test(req.url));
+  const isJs = ct.includes('javascript') || /\.(js|mjs)$/i.test(req.url);
+  const body = String(req.responseBody || '');
+
+  // Missing security headers
+  const lowerH = Object.fromEntries(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]));
+  if (!lowerH['content-security-policy'] && !lowerH['content-security-policy-report-only']) {
+    vulns.push({ severity: 'medium', title: 'Missing Content-Security-Policy', desc: 'No CSP header or report-only variant found. Increases XSS / data injection risk.' });
+  }
+  if (!lowerH['x-frame-options'] && !lowerH['frame-options']) {
+    vulns.push({ severity: 'medium', title: 'Missing X-Frame-Options', desc: 'Page may be embeddable in a third-party frame (clickjacking risk).' });
+  }
+  if (!lowerH['strict-transport-security'] && req.url && req.url.startsWith('https://')) {
+    vulns.push({ severity: 'medium', title: 'Missing Strict-Transport-Security', desc: 'No HSTS header on HTTPS response. Connection may be downgraded.' });
+  }
+  if (!lowerH['x-content-type-options']) {
+    vulns.push({ severity: 'low', title: 'Missing X-Content-Type-Options', desc: 'Browser may MIME-sniff responses into executable content.' });
+  }
+  if (!lowerH['referrer-policy']) {
+    vulns.push({ severity: 'info', title: 'Missing Referrer-Policy', desc: 'No explicit referrer policy. URLs and tokens may leak in Referer headers.' });
+  }
+
+  // Server version disclosure in headers
+  for (const re of VERSION_LEAK_PATTERNS) {
+    const m = re.exec(Object.entries(h).map(([k, v]) => `${k}: ${v}`).join('\n'));
+    if (m) vulns.push({ severity: 'low', title: 'Server/version disclosure (header)', desc: 'Response header reveals software/version: ' + m[1].replace(/^\s+/, '') });
+  }
+
+  // Body-level checks
+  if (isHtml || isJs) {
+    for (const re of SQL_ERROR_PATTERNS) {
+      if (re.test(body)) vulns.push({ severity: 'high', title: 'Possible SQL error leak', desc: 'Response body contains a database error message. May indicate SQL injection or information disclosure.' });
+    }
+    for (const re of STACK_TRACE_PATTERNS) {
+      if (re.test(body)) vulns.push({ severity: 'high', title: 'Stack trace / debug leak', desc: 'Response body contains a language stack trace or traceback. May reveal internal paths and logic.' });
+    }
+    for (const re of TODO_FIXME_PATTERNS) {
+      const matches = body.match(re);
+      if (matches && matches.length) vulns.push({ severity: 'info', title: 'Developer comments found', desc: `Found ${matches.length} occurrence(s) of ${matches[0].replace(/:/g, '')}. May expose internal notes.` });
+    }
+    for (const re of PATH_LEAK_PATTERNS) {
+      const matches = body.match(re);
+      if (matches && matches.length) vulns.push({ severity: 'low', title: 'Path / file leak', desc: `Found ${matches.length} file-system path(s) in response body, e.g. ${matches[0].slice(0, 80)}` });
+    }
+    for (const re of VERSION_LEAK_PATTERNS) {
+      const m = re.exec(body);
+      if (m) vulns.push({ severity: 'low', title: 'Version string in body', desc: 'Response body exposes software/version: ' + m[1].replace(/^\s+/, '') });
+    }
+  }
+
+  return vulns;
+}
+
+function renderVulnsPane(req) {
+  const pane = document.getElementById('pane-vulns');
+  if (!pane) return;
+  if (!req.vulns || !req.vulns.length) {
+    pane.innerHTML = '<div class="vuln-empty">No anomalies or vulnerabilities detected</div>';
+    return;
+  }
+  const counts = { high: 0, medium: 0, low: 0, info: 0 };
+  req.vulns.forEach(v => { counts[v.severity] = (counts[v.severity] || 0) + 1; });
+  const summary = Object.entries(counts).filter(([k, v]) => v).map(([k, v]) => `${k}: ${v}`).join(' · ');
+  pane.innerHTML = `<div class="section-label">Passive Scan Results (${req.vulns.length}) — ${summary}</div>
+    <div class="vuln-list">${req.vulns.map(v => `
+      <div class="vuln-item severity-${v.severity}">
+        <div class="vuln-title">[${v.severity.toUpperCase()}] ${escHtml(v.title)}</div>
+        <div class="vuln-desc">${escHtml(v.desc)}</div>
+      </div>`).join('')}</div>
+    </div>`;
+}
+
+function renderAppliedRules(req) {
+  if (!req.appliedRules || !req.appliedRules.length) return '';
+  return `<div class="applied-rules-list"><div class="section-label">Applied rewrite rules</div>${req.appliedRules.map(r => `<span class="applied-rule">${escHtml(r.type)}: ${escHtml(r.match)} → ${escHtml(r.replace || '(removed)')}</span>`).join('')}</div>`;
+}
+
+// ---------- HTML SUBRESOURCE PROXYING ----------
+function proxyUrl(u, base) {
+  try {
+    const abs = new URL(u, base).href;
+    if (abs.startsWith(CORS_PROXY) || abs.startsWith('data:') || abs.startsWith('blob:') || abs.startsWith('javascript:') || abs.startsWith('about:') || abs.startsWith('mailto:')) return abs;
+    return CORS_PROXY + encodeURIComponent(abs);
+  } catch (e) { return u; }
+}
+
+function proxyHtmlContent(html, baseUrl) {
+  // rewrite URLs inside attributes that cause subresource loads / navigations
+  const srcAttrs = ['src', 'href', 'action', 'poster', 'srcset', 'data-src', 'data-href', 'background', 'formaction'];
+  const tagAttrMap = {
+    'img': ['src', 'srcset'],
+    'source': ['src', 'srcset'],
+    'script': ['src'],
+    'link': ['href'],
+    'a': ['href'],
+    'form': ['action'],
+    'iframe': ['src'],
+    'video': ['src', 'poster'],
+    'audio': ['src', 'poster'],
+    'embed': ['src'],
+    'object': ['data'],
+    'input': ['formaction'],
+    'button': ['formaction'],
+    'base': ['href']
+  };
+
+  // 1. rewrite <base href>
+  html = html.replace(/<base\s+([^>]*)href\s*=\s*"([^"]*)"([^>]*)>/gi, (m, pre, url, post) => {
+    return `<base ${pre}href="${proxyUrl(url, baseUrl)}"${post}>`;
+  });
+  html = html.replace(/<base\s+([^>]*)href\s*=\s*'([^']*)'([^>]*)>/gi, (m, pre, url, post) => {
+    return `<base ${pre}href="${proxyUrl(url, baseUrl)}"${post}>`;
+  });
+
+  // 2. rewrite common attributes by tag
+  for (const [tag, attrs] of Object.entries(tagAttrMap)) {
+    const tagRe = new RegExp(`<${tag}\\s+([^>]*)>`, 'gi');
+    html = html.replace(tagRe, (m, inner) => {
+      let out = inner;
+      for (const attr of attrs) {
+        const doubleRe = new RegExp(`${attr}\\s*=\\s*"([^"]*)"`, 'gi');
+        const singleRe = new RegExp(`${attr}\\s*=\\s*'([^']*)'`, 'gi');
+        out = out.replace(doubleRe, (m2, v) => `${attr}="${proxyUrl(v, baseUrl)}"`);
+        out = out.replace(singleRe, (m2, v) => `${attr}="${proxyUrl(v, baseUrl)}"`);
+      }
+      return `<${tag} ${out}>`;
+    });
+  }
+
+  // 3. rewrite inline styles with url(...)
+  html = html.replace(/url\((['"]?)([^'"\)]+)\1\)/gi, (m, q, url) => {
+    return `url(${q}${proxyUrl(url, baseUrl)}${q})`;
+  });
+
+  // 4. rewrite JSON in <script type="application/json" data-src etc.
+  html = html.replace(/"(https?:\/\/[^"]+)"/g, (m, url) => {
+    // only rewrite if inside common tag attributes (rough heuristic)
+    return `"${proxyUrl(url, baseUrl)}"`;
+  });
+
+  return html;
+}
+
+function absoluteUrl(u, base) {
+  try { return new URL(u, base).href; } catch (e) { return u; }
+}
+
+
 (function init() {
+  loadRewriteRules();
+  initResizablePanels();
+  initHeaderPopovers();
+  initTooling();
   createRepeaterTab(null);
-  navigate('https://example.com');
+  navigate('https://okhx.github.io');
 })();
 
 (function initVertigo() {
@@ -2236,5 +5036,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0c25e275b723f34',t:'MTc4MTUzNDgyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0c6ebf0bc416426',t:'MTc4MTU4MjU3NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
