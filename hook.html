@@ -1741,7 +1741,19 @@ body.resizing-panels * { user-select: none !important; cursor: inherit !importan
         <div id="history-list"><div class="console-empty">No history yet</div></div>
       </div>
       <div class="header-popover" id="settings-popover">
-        <div class="header-popover-title"><span>Scope settings</span><button class="scope-remove" onclick="toggleSettings(false)">×</button></div>
+        <div class="header-popover-title"><span>MITM Proxy Link</span><button class="scope-remove" onclick="toggleSettings(false)">×</button></div>
+        <div style="font-size:9px;color:#555;line-height:1.5;margin-bottom:6px;">
+          Connects to a real local MITM proxy (sys-proxy) so px://hook captures actual device traffic - real headers, all methods, decrypted HTTPS - instead of the in-browser fetch hack. Run <code>npm start</code> in the sys-proxy folder, then connect below.
+        </div>
+        <div class="settings-row">
+          <div class="settings-scope-add">
+            <input class="tool-input" id="mitm-ws-input" placeholder="ws://127.0.0.1:8889" value="ws://127.0.0.1:8889">
+            <button class="toolbar-btn" id="mitm-connect-btn" onclick="toggleMitmConnection()">Connect</button>
+          </div>
+        </div>
+        <div id="mitm-status-line" style="font-size:10px;color:#888;margin-top:4px;">not connected</div>
+
+        <div class="header-popover-title" style="margin-top:14px;"><span>Scope settings</span></div>
         <div class="settings-row"><label><input type="checkbox" id="settings-scope-only"> Show only in-scope items</label></div>
         <div class="settings-row">
           <div class="settings-scope-add">
@@ -2172,6 +2184,10 @@ body.resizing-panels * { user-select: none !important; cursor: inherit !importan
 <script>
 const CORS_PROXY = 'https://corsproxy.io/?url=';
 
+let mitmSocket = null;
+let mitmConnected = false;
+let mitmCapturedIds = new Set(); // tracks proxy entry ids already captured, to dedupe on reconnect
+
 let requests = [];
 let selectedReqId = null;
 let ctxTargetId = null;
@@ -2212,7 +2228,7 @@ const urlInput = document.getElementById('url-input');
 const mainIframe = document.getElementById('main-iframe');
 const browserOverlay = document.getElementById('browser-overlay');
 
-async function navigate(url, pushHistory = true) {
+async function navigate(url, pushHistory = true, navOpts = null) {
   if (!url) return;
   if (!url.startsWith('http')) url = 'https://' + url;
   urlInput.value = url;
@@ -2222,9 +2238,16 @@ async function navigate(url, pushHistory = true) {
   renderBrowserConsole();
   renderStorageMonitor();
 
+  // navOpts lets form submissions (and anything else) drive a real
+  // GET/POST/PUT/etc navigation instead of always assuming GET.
+  const navMethod = (navOpts && navOpts.method ? String(navOpts.method) : 'GET').toUpperCase();
+  const navBody = navOpts && navOpts.body != null ? navOpts.body : null;
+  const navContentType = navOpts && navOpts.contentType ? navOpts.contentType : null;
+  const navFieldsPreview = navOpts && navOpts.fieldsPreview ? navOpts.fieldsPreview : '';
+
   browserOverlay.classList.add('hidden');
   mainIframe.removeAttribute('src');
-  mainIframe.srcdoc = `<div style="color:#888;background:#000;padding:20px;font-family:monospace;font-size:12px;">Connecting to ${url} via secure proxy pipeline...</div>`;
+  mainIframe.srcdoc = `<div style="color:#888;background:#000;padding:20px;font-family:monospace;font-size:12px;">Connecting to ${url} via secure proxy pipeline (${navMethod})...</div>`;
 
   if (pushHistory) {
     if (browserHistoryIdx < browserHistory.length - 1) {
@@ -2241,7 +2264,22 @@ async function navigate(url, pushHistory = true) {
     const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
     const controller = new AbortController();
     navTimeout = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(proxiedUrl, { signal: controller.signal, cache: 'no-store' });
+
+    const fetchInit = { signal: controller.signal, cache: 'no-store', method: navMethod };
+    const outgoingHeaders = {
+      'Host': new URL(url).host,
+      'User-Agent': navigator.userAgent,
+      'Accept': 'text/html'
+    };
+    if (navMethod !== 'GET' && navMethod !== 'HEAD' && navBody != null) {
+      fetchInit.body = navBody;
+      if (navContentType) {
+        fetchInit.headers = { 'Content-Type': navContentType };
+        outgoingHeaders['Content-Type'] = navContentType;
+      }
+    }
+
+    const res = await fetch(proxiedUrl, fetchInit);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     
     let html = await res.text();
@@ -2253,21 +2291,17 @@ async function navigate(url, pushHistory = true) {
     res.headers.forEach((v, k) => respHeaders[k] = v);
 
     captureRequest({
-      method: 'GET',
+      method: navMethod,
       url: url,
-      headers: {
-        'Host': new URL(url).host,
-        'User-Agent': navigator.userAgent,
-        'Accept': 'text/html'
-      },
-      body: '',
+      headers: outgoingHeaders,
+      body: navMethod !== 'GET' && navMethod !== 'HEAD' ? (navFieldsPreview || (typeof navBody === 'string' ? navBody : '[non-text body]')) : '',
       status: res.status,
       statusText: res.statusText,
       responseHeaders: respHeaders,
       responseBody: html,
       size: formatBytes(new Blob([html]).size),
       duration: elapsed + 'ms',
-      requestType: 'navigation',
+      requestType: navMethod === 'GET' ? 'navigation' : 'navigation-form',
       frameUrl: url,
       pageTitle: 'Top-level HTML document'
     });
@@ -2369,11 +2403,14 @@ async function navigate(url, pushHistory = true) {
               if (body instanceof URLSearchParams) return capText(body.toString());
               if (body instanceof FormData) {
                 const out = [];
-                body.forEach(function(v, k) { out.push(k + '=' + (v && v.name ? '[File ' + v.name + ']' : String(v))); });
+                body.forEach(function(v, k) { out.push(k + '=' + (v && v.name != null && v.size != null ? '[File ' + v.name + ', ' + v.size + ' bytes]' : String(v))); });
                 return capText(out.join('&'));
               }
-              if (body instanceof Blob) return '[Blob ' + body.type + ' ' + body.size + ' bytes]';
-              if (body instanceof ArrayBuffer) return '[ArrayBuffer ' + body.byteLength + ' bytes]';
+              if (body instanceof Blob) return '[Blob ' + (body.type || 'unknown') + ', ' + body.size + ' bytes]';
+              if (body instanceof ArrayBuffer) return '[ArrayBuffer, ' + body.byteLength + ' bytes]';
+              if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(body)) {
+                return '[' + (body.constructor && body.constructor.name || 'TypedArray') + ', ' + body.byteLength + ' bytes]';
+              }
               return capText(String(body));
             } catch(e) { return '[unreadable body]'; }
           }
@@ -2598,11 +2635,79 @@ async function navigate(url, pushHistory = true) {
             }
           }, true);
 
+          // Full form interception: capture method/action/enctype + every
+          // field (including files by name for multipart), build the real
+          // request body, and hand it to the parent to actually send through
+          // the proxy and log - instead of the old stub which only fired a
+          // fake "intent" message with method hardcoded to GET and no body.
           document.addEventListener('submit', function(e) {
             const form = e.target;
-            if (form && form.action) {
-              const abs = new URL(form.action, document.baseURI).href;
-              post({ type: 'IFRAME_NAVIGATE', url: abs, reason: 'form-submit' });
+            if (!form || !(form instanceof HTMLFormElement)) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            try {
+              const method = (form.getAttribute('method') || 'GET').toUpperCase();
+              const enctype = (form.getAttribute('enctype') || 'application/x-www-form-urlencoded').toLowerCase();
+              const actionAttr = form.getAttribute('action');
+              const actionUrl = new URL(actionAttr || location.href, document.baseURI);
+
+              // Include the name/value of whichever submit button triggered this, if any
+              const submitter = e.submitter;
+              const fd = new FormData(form);
+              if (submitter && submitter.name && !fd.has(submitter.name)) {
+                fd.append(submitter.name, submitter.value || '');
+              }
+
+              let hasFile = false;
+              const pairs = [];
+              for (const [k, v] of fd.entries()) {
+                if (v instanceof File) { hasFile = true; pairs.push([k, v]); }
+                else pairs.push([k, v]);
+              }
+
+              if (method === 'GET') {
+                const qs = new URLSearchParams();
+                pairs.forEach(function(p) { qs.append(p[0], p[1] instanceof File ? p[1].name : p[1]); });
+                actionUrl.search = qs.toString();
+                post({
+                  type: 'IFRAME_FORM_SUBMIT',
+                  method: 'GET',
+                  url: actionUrl.href,
+                  body: null,
+                  contentType: '',
+                  fieldsPreview: qs.toString()
+                });
+                return;
+              }
+
+              // POST / PUT / PATCH / DELETE with a body
+              const fieldsPreview = pairs.map(function(p) {
+                return p[0] + '=' + (p[1] instanceof File ? '[File ' + p[1].name + ', ' + p[1].size + ' bytes]' : String(p[1]));
+              }).join('&');
+
+              if (enctype === 'multipart/form-data' || hasFile) {
+                // Let fetch set the multipart boundary itself; pass FormData through
+                post({
+                  type: 'IFRAME_FORM_SUBMIT',
+                  method: method,
+                  url: actionUrl.href,
+                  body: '__FORMDATA__',
+                  formFields: pairs.map(function(p) { return { name: p[0], value: p[1] instanceof File ? null : String(p[1]), fileName: p[1] instanceof File ? p[1].name : null, fileSize: p[1] instanceof File ? p[1].size : null, fileType: p[1] instanceof File ? p[1].type : null }; }),
+                  contentType: '',
+                  fieldsPreview: fieldsPreview
+                });
+              } else if (enctype === 'text/plain') {
+                const body = pairs.map(function(p) { return p[0] + '=' + (p[1] instanceof File ? p[1].name : p[1]); }).join('\n');
+                post({ type: 'IFRAME_FORM_SUBMIT', method: method, url: actionUrl.href, body: body, contentType: 'text/plain', fieldsPreview: fieldsPreview });
+              } else {
+                const qs = new URLSearchParams();
+                pairs.forEach(function(p) { qs.append(p[0], p[1] instanceof File ? p[1].name : p[1]); });
+                const body = qs.toString();
+                post({ type: 'IFRAME_FORM_SUBMIT', method: method, url: actionUrl.href, body: body, contentType: 'application/x-www-form-urlencoded', fieldsPreview: fieldsPreview });
+              }
+            } catch(err) {
+              post({ type: 'IFRAME_NAVIGATE', url: location.href, reason: 'form-submit-error: ' + (err && err.message || err) });
             }
           }, true);
 
@@ -2767,6 +2872,33 @@ async function navigate(url, pushHistory = true) {
             try { this.addEventListener('loadend', done, { once: true }); } catch(e) {}
             return origSend.apply(this, arguments);
           };
+
+          // hook navigator.sendBeacon (fire-and-forget POSTs, often used by
+          // analytics/unload handlers, that fetch/XHR hooks never see)
+          if (navigator.sendBeacon) {
+            const origBeacon = navigator.sendBeacon.bind(navigator);
+            navigator.sendBeacon = function(url, data) {
+              try {
+                const abs = new URL(url, document.baseURI).href;
+                post({
+                  type: 'IFRAME_AJAX',
+                  requestType: 'beacon',
+                  method: 'POST',
+                  url: abs,
+                  headers: {},
+                  body: bodyPreview(data),
+                  status: 0,
+                  statusText: 'Beacon (fire-and-forget)',
+                  responseHeaders: {},
+                  responseBody: '[sendBeacon has no response]',
+                  size: 0,
+                  duration: '0ms',
+                  initiator: (new Error()).stack || ''
+                });
+              } catch(e) {}
+              return origBeacon(url, data);
+            };
+          }
         })();
       <\/script>
     `;
@@ -2785,26 +2917,33 @@ async function navigate(url, pushHistory = true) {
     if (navTimeout) clearTimeout(navTimeout);
     const elapsed = Math.round(performance.now() - startTime);
     captureRequest({
-      method: 'GET',
+      method: navMethod,
       url,
       headers: { 'Host': (() => { try { return new URL(url).host; } catch(e) { return ''; } })(), 'Accept': 'text/html' },
-      body: '',
+      body: navMethod !== 'GET' && navMethod !== 'HEAD' ? (navFieldsPreview || '[non-text body]') : '',
       status: 0,
       statusText: 'Proxy Navigation Failed',
       responseHeaders: {},
       responseBody: String(err && (err.stack || err.message) || err),
       size: '-',
       duration: elapsed + 'ms',
-      requestType: 'navigation',
+      requestType: navMethod === 'GET' ? 'navigation' : 'navigation-form',
       frameUrl: url,
       error: true
     });
-    notify('Proxy load failed/slow; trying direct iframe fallback (hooks may be disabled)', 'info');
-    try {
-      mainIframe.removeAttribute('srcdoc');
-      mainIframe.src = url;
-    } catch(e) {
-      mainIframe.srcdoc = `<div style="color:#f87171;background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy Navigation Failed</h3><p>${escHtml(err.message)}</p><p>Direct fallback also failed: ${escHtml(e.message)}</p></div>`;
+    if (navMethod !== 'GET' && navMethod !== 'HEAD') {
+      // Can't fall back to a direct iframe.src for a POST/PUT/etc - that would
+      // silently turn it into a GET and lose the body. Surface it instead.
+      notify('Proxy ' + navMethod + ' navigation failed - direct fallback would drop the request body, so it was not attempted', 'error');
+      mainIframe.srcdoc = `<div style="color:#f87171;background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy ${navMethod} Navigation Failed</h3><p>${escHtml(err.message)}</p><p>No direct fallback for non-GET navigation (would lose the request body).</p></div>`;
+    } else {
+      notify('Proxy load failed/slow; trying direct iframe fallback (hooks may be disabled)', 'info');
+      try {
+        mainIframe.removeAttribute('srcdoc');
+        mainIframe.src = url;
+      } catch(e) {
+        mainIframe.srcdoc = `<div style="color:#f87171;background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy Navigation Failed</h3><p>${escHtml(err.message)}</p><p>Direct fallback also failed: ${escHtml(e.message)}</p></div>`;
+      }
     }
   }
 }
@@ -2834,6 +2973,12 @@ window.addEventListener('message', event => {
   }
 
   if (data.type === 'IFRAME_NAVIGATE') {
+    if (data.reason === 'anchor-click') {
+      // Actually follow the link through the proxy so navigation keeps
+      // working (multi-page flows) instead of dead-ending at a log entry.
+      navigate(data.url, true).catch(function() {});
+      return;
+    }
     captureRequest({
       method: 'GET',
       url: data.url,
@@ -2849,6 +2994,56 @@ window.addEventListener('message', event => {
       frameUrl: data.frameUrl || '',
       pageTitle: data.pageTitle || ''
     });
+    return;
+  }
+
+  if (data.type === 'IFRAME_FORM_SUBMIT') {
+    (async function() {
+      try {
+        if (data.body === '__FORMDATA__' && Array.isArray(data.formFields)) {
+          // Multipart: we can't carry real File objects across postMessage,
+          // so rebuild a FormData using the field metadata. File contents
+          // aren't available here (only name/size/type), so files are sent
+          // as empty placeholders - this still lets you see and replay the
+          // field structure/names; the focus is capturing the request shape.
+          const fd = new FormData();
+          data.formFields.forEach(function(f) {
+            if (f.fileName != null) {
+              fd.append(f.name, new Blob([], { type: f.fileType || 'application/octet-stream' }), f.fileName);
+            } else {
+              fd.append(f.name, f.value != null ? f.value : '');
+            }
+          });
+          await navigate(data.url, true, {
+            method: data.method,
+            body: fd,
+            fieldsPreview: data.fieldsPreview || ''
+          });
+        } else {
+          await navigate(data.url, true, {
+            method: data.method,
+            body: data.body,
+            contentType: data.contentType || '',
+            fieldsPreview: data.fieldsPreview || ''
+          });
+        }
+      } catch(e) {
+        captureRequest({
+          method: data.method || 'POST',
+          url: data.url,
+          headers: {},
+          body: data.fieldsPreview || '',
+          status: 0,
+          statusText: 'Form Submit Failed',
+          responseHeaders: {},
+          responseBody: String(e && (e.stack || e.message) || e),
+          size: '-',
+          duration: '0ms',
+          requestType: 'navigation-form',
+          error: true
+        });
+      }
+    })();
     return;
   }
 
@@ -3078,6 +3273,87 @@ function captureRequest(data) {
 function isInScope(url) {
   if (!scopeList.length) return false;
   return scopeList.some(s => url.includes(s));
+}
+
+// ---------- MITM proxy link (real local sys-proxy backend) ----------
+
+function mitmEntryToCaptureData(entry) {
+  return {
+    method: entry.method,
+    url: entry.url,
+    headers: entry.headers || {},
+    body: entry.body || '',
+    status: entry.status,
+    statusText: entry.statusText || '',
+    responseHeaders: entry.responseHeaders || {},
+    responseBody: entry.responseBody || '',
+    size: typeof entry.responseSize === 'number' ? formatBytes(entry.responseSize) : '-',
+    duration: entry.duration || '0ms',
+    requestType: 'mitm-proxy',
+    error: !!entry.error
+  };
+}
+
+function setMitmStatus(text, color) {
+  const el = document.getElementById('mitm-status-line');
+  if (el) { el.textContent = text; el.style.color = color || '#888'; }
+}
+
+function toggleMitmConnection() {
+  if (mitmConnected) {
+    if (mitmSocket) { try { mitmSocket.close(); } catch(e) {} }
+    return;
+  }
+  const input = document.getElementById('mitm-ws-input');
+  const url = (input && input.value.trim()) || 'ws://127.0.0.1:8889';
+  let ws;
+  try {
+    ws = new WebSocket(url);
+  } catch(e) {
+    notify('Invalid MITM proxy URL: ' + e.message, 'error');
+    return;
+  }
+  mitmSocket = ws;
+  setMitmStatus('connecting to ' + url + ' ...', '#facc15');
+
+  ws.addEventListener('open', () => {
+    mitmConnected = true;
+    mitmCapturedIds.clear();
+    setMitmStatus('● connected - ' + url, '#4ade80');
+    const btn = document.getElementById('mitm-connect-btn');
+    if (btn) btn.textContent = 'Disconnect';
+    notify('Connected to MITM proxy', 'success');
+  });
+
+  ws.addEventListener('message', (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch(e) { return; }
+    if (msg.type === 'history' && Array.isArray(msg.entries)) {
+      msg.entries.forEach(entry => {
+        if (mitmCapturedIds.has(entry.id)) return;
+        mitmCapturedIds.add(entry.id);
+        captureRequest(mitmEntryToCaptureData(entry));
+      });
+      return;
+    }
+    if (msg.type === 'capture' && msg.entry) {
+      if (mitmCapturedIds.has(msg.entry.id)) return;
+      mitmCapturedIds.add(msg.entry.id);
+      captureRequest(mitmEntryToCaptureData(msg.entry));
+    }
+  });
+
+  ws.addEventListener('close', () => {
+    mitmConnected = false;
+    mitmSocket = null;
+    setMitmStatus('disconnected', '#888');
+    const btn = document.getElementById('mitm-connect-btn');
+    if (btn) btn.textContent = 'Connect';
+  });
+
+  ws.addEventListener('error', () => {
+    setMitmStatus('connection error - is sys-proxy running?', '#f87171');
+  });
 }
 
 function updateStats() {
