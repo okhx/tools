@@ -58,8 +58,7 @@ only "trust" step. Nothing else about your device changes.
 
 The simplest setup. Browse on the same machine running the proxy.
 
-1. **Download** this repo (or the `sys-proxy` folder + `hook.html` + `ca-forge.html`).
-2. **Generate a CA.** Open `ca-forge.html` in any browser. Click **Generate
+1. **Generate a CA.** Open `okhx.github.io/tools/ca` in any browser. Click **Generate
    CA**. In step 4, download `ca.cert.pem` and `ca.key.pem`, and place both
    inside `sys-proxy/certs/` (create that folder if it doesn't exist).
 3. **Install the CA on this computer:**
@@ -79,7 +78,7 @@ The simplest setup. Browse on the same machine running the proxy.
    ```
 5. **Set your system proxy** to `127.0.0.1:8888` (System Settings → Network
    → Proxies on Mac, Settings → Network & Internet → Proxy on Windows).
-6. **Open `hook.html`**, click the gear icon, under **MITM Proxy Link**
+6. **Open `okhx.github.io/tools/hook`**, click the gear icon, under **MITM Proxy Link**
    enter `ws://127.0.0.1:8889`, click **Connect**.
 7. Browse normally — every request appears live in `px://hook`.
 
@@ -105,7 +104,7 @@ The simplest setup. Browse on the same machine running the proxy.
    HTTPS will still fail.
 6. Go to **Settings → Wi-Fi → (i) next to your network → Configure Proxy →
    Manual**. Server = the computer's LAN IP, Port = `8888`.
-7. **On the computer**, open `hook.html`, gear icon, **MITM Proxy Link**,
+7. **On the computer**, open `okhx.github.io/tools/hook`, gear icon, **MITM Proxy Link**,
    enter `ws://127.0.0.1:8889`, **Connect**.
 8. Browse on the iPhone — traffic appears live on the computer's screen.
 
@@ -156,7 +155,7 @@ environment for Android, no root required).
    **Modify network → Advanced → Proxy → Manual**. Server = the phone's own
    Wi-Fi IP (printed by the setup script — not `127.0.0.1`, Android's proxy
    setting needs a real address even pointing at itself). Port = `8888`.
-7. Open `hook.html` in a browser on the phone (or any device that can
+7. Open `okhx.github.io/tools/hook` in a browser on the phone (or any device that can
    reach the phone's IP) and connect to `ws://<phone-IP>:8889`.
 
 ---
@@ -194,7 +193,7 @@ network to act as the proxy host.
 
 **"is sys-proxy running?" in px://hook** — the proxy isn't started, or
 you're connecting to the wrong address. `ws://127.0.0.1:8889` only works
-if `hook.html` is open on the *same* machine running `sys-proxy`. If
+if `px://hook` is open on the *same* machine running `sys-proxy`. If
 they're on different devices, use that device's actual LAN/Wi-Fi IP.
 
 **HTTPS sites fail to load after installing the cert** — on iPhone, you
@@ -217,7 +216,7 @@ build instead; the Play Store version stopped receiving repository updates.
 
 | File | What it does |
 |---|---|
-| `hook.html` | The request inspector UI (Burp-style: Repeater, Intruder, Organizer, vuln scanning) |
+| `px://hook` | Repeater, Intruder, Organizer, vuln scanning, Burp in your pocket |
 | `ca.html` | Generates a CA cert entirely in-browser, no install needed to generate it |
 | `sys-proxy/` | The actual MITM proxy server (Node) |
 | `sys-proxy/termux/setup.sh` | One-shot Android/Termux bootstrap |
