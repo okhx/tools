@@ -87,7 +87,7 @@ The simplest setup. Browse on the same machine running the proxy.
 
 ## Scenario B — iPhone, with a computer on the same Wi-Fi
 
-1. On the computer, generate a CA (`ca-forge.html`, step 1) and start
+1. On the computer, generate a CA (`okhx.github.io/tools/ca`, step 1) and start
    `sys-proxy` (steps 1–2 and 4 from Scenario A) — but skip installing the
    CA on the computer itself; it's the iPhone that needs to trust it.
 2. Find the computer's LAN IP:
@@ -123,8 +123,8 @@ environment for Android, no root required).
    Termux:
    ```bash
    pkg install git -y
-   git clone <your-repo-url>
-   cd <repo-folder>/sys-proxy
+   git clone https://github.com/okhx/tools
+   cd sys-proxy
    ```
 3. Run the bootstrap script:
    ```bash
