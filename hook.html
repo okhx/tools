@@ -1745,6 +1745,7 @@ body.resizing-panels * { user-select: none !important; cursor: inherit !importan
         <div style="font-size:9px;color:#555;line-height:1.5;margin-bottom:6px;">
           Connects to a real local MITM proxy (sys-proxy) so px://hook captures actual device traffic - real headers, all methods, decrypted HTTPS - instead of the in-browser fetch hack. Run <code>npm start</code> in the sys-proxy folder, then connect below.
         </div>
+        <a href="https://github.com/okhx/tools/blob/main/MITM%20Proxy%20Instruction.md" target="_blank" rel="noopener noreferrer" class="toolbar-btn" style="display:block; text-align:center; text-decoration:none; margin-bottom:10px; box-sizing:border-box;">📖 Setup tutorial</a>
         <div class="settings-row">
           <div class="settings-scope-add">
             <input class="tool-input" id="mitm-ws-input" placeholder="ws://127.0.0.1:8889" value="ws://127.0.0.1:8889">
@@ -2238,8 +2239,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
   renderBrowserConsole();
   renderStorageMonitor();
 
-  // navOpts lets form submissions (and anything else) drive a real
-  // GET/POST/PUT/etc navigation instead of always assuming GET.
   const navMethod = (navOpts && navOpts.method ? String(navOpts.method) : 'GET').toUpperCase();
   const navBody = navOpts && navOpts.body != null ? navOpts.body : null;
   const navContentType = navOpts && navOpts.contentType ? navOpts.contentType : null;
@@ -2576,14 +2575,11 @@ async function navigate(url, pushHistory = true, navOpts = null) {
               }
             }
           }
-
-          // Rewrite existing elements
           document.querySelectorAll(Object.keys(SUBRESOURCE_ATTRS).join(',')).forEach(function(el) {
             rewriteElementAttrs(el);
             reportSubresource(el);
           });
 
-          // Hook new elements before they are inserted
           const origAppend = Element.prototype.appendChild;
           const origInsertBefore = Element.prototype.insertBefore;
           const origReplaceChild = Element.prototype.replaceChild;
@@ -2626,7 +2622,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
           });
           observer.observe(document.documentElement || document.body, { childList: true, subtree: true, attributes: true });
 
-          // Intercept navigation via anchor clicks / form submissions
           document.addEventListener('click', function(e) {
             const a = e.target.closest('a');
             if (a && a.href && !a.href.startsWith('javascript:') && !a.href.startsWith('mailto:') && !a.target) {
@@ -2635,8 +2630,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
             }
           }, true);
 
-          // Full form interception: capture method/action/enctype + every
-          // field (including files by name for multipart), build the real
           // request body, and hand it to the parent to actually send through
           // the proxy and log - instead of the old stub which only fired a
           // fake "intent" message with method hardcoded to GET and no body.
@@ -2652,7 +2645,7 @@ async function navigate(url, pushHistory = true, navOpts = null) {
               const actionAttr = form.getAttribute('action');
               const actionUrl = new URL(actionAttr || location.href, document.baseURI);
 
-              // Include the name/value of whichever submit button triggered this, if any
+              // include the name/value of whichever submit button triggered this, if any
               const submitter = e.submitter;
               const fd = new FormData(form);
               if (submitter && submitter.name && !fd.has(submitter.name)) {
@@ -2681,13 +2674,11 @@ async function navigate(url, pushHistory = true, navOpts = null) {
                 return;
               }
 
-              // POST / PUT / PATCH / DELETE with a body
               const fieldsPreview = pairs.map(function(p) {
                 return p[0] + '=' + (p[1] instanceof File ? '[File ' + p[1].name + ', ' + p[1].size + ' bytes]' : String(p[1]));
               }).join('&');
 
               if (enctype === 'multipart/form-data' || hasFile) {
-                // Let fetch set the multipart boundary itself; pass FormData through
                 post({
                   type: 'IFRAME_FORM_SUBMIT',
                   method: method,
@@ -2711,7 +2702,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
             }
           }, true);
 
-          // Periodically report resource timing entries for real subresource loads
           setInterval(function() {
             try {
               const entries = performance.getEntriesByType('resource') || [];
@@ -2873,8 +2863,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
             return origSend.apply(this, arguments);
           };
 
-          // hook navigator.sendBeacon (fire-and-forget POSTs, often used by
-          // analytics/unload handlers, that fetch/XHR hooks never see)
           if (navigator.sendBeacon) {
             const origBeacon = navigator.sendBeacon.bind(navigator);
             navigator.sendBeacon = function(url, data) {
@@ -2932,8 +2920,6 @@ async function navigate(url, pushHistory = true, navOpts = null) {
       error: true
     });
     if (navMethod !== 'GET' && navMethod !== 'HEAD') {
-      // Can't fall back to a direct iframe.src for a POST/PUT/etc - that would
-      // silently turn it into a GET and lose the body. Surface it instead.
       notify('Proxy ' + navMethod + ' navigation failed - direct fallback would drop the request body, so it was not attempted', 'error');
       mainIframe.srcdoc = `<div style="color:#f87171;background:#000;padding:20px;font-family:monospace;font-size:12px;"><h3>Proxy ${navMethod} Navigation Failed</h3><p>${escHtml(err.message)}</p><p>No direct fallback for non-GET navigation (would lose the request body).</p></div>`;
     } else {
@@ -2974,8 +2960,6 @@ window.addEventListener('message', event => {
 
   if (data.type === 'IFRAME_NAVIGATE') {
     if (data.reason === 'anchor-click') {
-      // Actually follow the link through the proxy so navigation keeps
-      // working (multi-page flows) instead of dead-ending at a log entry.
       navigate(data.url, true).catch(function() {});
       return;
     }
@@ -3001,11 +2985,6 @@ window.addEventListener('message', event => {
     (async function() {
       try {
         if (data.body === '__FORMDATA__' && Array.isArray(data.formFields)) {
-          // Multipart: we can't carry real File objects across postMessage,
-          // so rebuild a FormData using the field metadata. File contents
-          // aren't available here (only name/size/type), so files are sent
-          // as empty placeholders - this still lets you see and replay the
-          // field structure/names; the focus is capturing the request shape.
           const fd = new FormData();
           data.formFields.forEach(function(f) {
             if (f.fileName != null) {
@@ -3259,9 +3238,7 @@ function captureRequest(data) {
     rawRequest: data.rawRequest || '',
     error: !!data.error
   };
-  // Apply Match & Replace rules
   req.appliedRules = applyRewriteRulesToRequest(req).map(r => ({ type: r.type, match: r.match, replace: r.replace }));
-  // Scan response after applying response rules
   req.appliedRules = req.appliedRules.concat(applyRewriteRulesToResponse(req).map(r => ({ type: r.type, match: r.match, replace: r.replace })));
   req.vulns = scanVulnerabilities(req);
   requests.unshift(req);
@@ -3275,7 +3252,7 @@ function isInScope(url) {
   return scopeList.some(s => url.includes(s));
 }
 
-// ---------- MITM proxy link (real local sys-proxy backend) ----------
+				// mitm
 
 function mitmEntryToCaptureData(entry) {
   return {
