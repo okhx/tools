@@ -17,7 +17,16 @@ A comprehensive tool for working with pixel structure and hidden image data:
 
 **Perceptual Hashing (pHash):** Analyze image structure, generate persistent hashes, and calculate Hamming distance to find visual duplicates and traces of editing.
 
-### 2. 🛠️ `px://hook` — Advanced Session Intercept & Security Diagnostics
+### 2. `cyber://tools` — local developer, security, and infrastructure utilities
+An offline browser-based toolbox: data stays on the device.
+
+**Core utilities:** Text/File Base64, URL and Hex conversion; MD5 and SHA hashes; AES-256-GCM encryption; UUID/ULID generation; JWT inspection; JSON type generation; regex testing; CIDR calculation; HTTP security-header checks; and password generation.
+
+**File preview:** Base64 images preview in place with zoom controls. Text-like files show their name, type, size, and readable contents when safely supported.
+
+**DevOps & data helpers:** Dockerfile/Compose checks, IAM permission matrix, SQL formatter, database connection-string generator, log timestamp normalizer, and JSON/XML conversion.
+
+### 3. 🛠️ `px://hook` — Advanced Session Intercept & Security Diagnostics
 A comprehensive, specialized environment for capturing traffic, debugging web requests, automating payload injection, and auditing client-side application security.
 px://hook acts as a full-featured web proxy and security analysis hub directly within your ecosystem, designed for security engineers and developers.
 
