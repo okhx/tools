@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      line-height: 1.5;
+    }
+    .controls {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .format-options {
+      margin: 10px 0;
+    }
+    textarea {
+      width: 100%;
+      height: 400px;
+      font-family: monospace;
+      font-size: 13px;
+      box-sizing: border-box;
+      padding: 10px;
+      white-space: pre;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .status {
+      margin: 10px 0;
+      color: #333;
+    }
+    .note {
+      margin: 10px 0;
+      color: #666;
+      font-size: 13px;
+    }
+    button {
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+    .btn-force {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <label for="fileInput">choose file: </label>
+    <input type="file" id="fileInput" accept="*/*">
+    <button type="button" id="forceBtn" class="btn-force">force</button>
+  </div>
+
+  <div class="format-options">
+    <label><b>output format:</b></label>
+    <label><input type="radio" name="format" value="detailed" checked> extended</label>
+    <label><input type="radio" name="format" value="frames"> only frames</label>
+    <label><input type="radio" name="format" value="json"> JSON</label>
+  </div>
+
+  <div class="controls">
+    <button id="downloadBtn" disabled>download (.txt)</button>
+    <button id="copyBtn" disabled>copy</button>
+    <button id="vineBtn" disabled>convert &rarr; .vine</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="error" class="error"></div>
+  <div id="note" class="note"></div>
+
+  <textarea id="output" placeholder="result appear here after macro uploading..." readonly></textarea>
+
+  <script>
+
+    function readVarint(bytes, pos) {
+      let value = 0n, shift = 0n;
+      for (;;) {
+        const byte = bytes[pos.i++];
+        value |= BigInt(byte & 0x7f) << shift;
+        if ((byte & 0x80) === 0) return value;
+        shift += 7n;
+      }
+    }
+
+    function writeVarint(out, value) {
+      let v = BigInt(value);
+      for (;;) {
+        const byte = Number(v & 0x7fn);
+        v >>= 7n;
+        if (v === 0n) { out.push(byte); return; }
+        out.push(byte | 0x80);
+      }
+    }
+
+    const CRC32C_TABLE = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0x82f63b78 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c >>> 0;
+      }
+      return t;
+    })();
+
+    function crc32c(bytes) {
+      let crc = 0xffffffff;
+      for (let i = 0; i < bytes.length; i++)
+        crc = CRC32C_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function parseVine(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const view = new DataView(buffer);
+      if (bytes.length < 8 || String.fromCharCode(...bytes.slice(0, 4)) !== 'VINE')
+        throw new Error("incorrect format, '.vine' signature not found");
+
+      const pos = { i: 8 };
+      const macro = { seed: 0n, tps: 240, frames: [] };
+
+      for (let i = 0; i < 3; i++) {
+        if (pos.i >= bytes.length) break;
+        const id = bytes[pos.i++];
+        const length = view.getUint32(pos.i, true);
+        pos.i += 4;
+
+        const payload = bytes.subarray(pos.i, pos.i + length);
+        pos.i += length + 4;
+
+        if (id === 1) {
+          const p = { i: 0 };
+          macro.seed = readVarint(payload, p);
+          macro.tps = new DataView(payload.buffer, payload.byteOffset + p.i, 8).getFloat64(0, true);
+        } else if (id === 2) {
+          const p = { i: 0 };
+          let frame = 0n;
+          while (p.i < payload.length) {
+            frame += readVarint(payload, p);
+            macro.frames.push(Number(frame));
+          }
+        }
+      }
+      return macro;
+    }
+
+    const EventKind = {
+      Jump: 'jump', Left: 'left', Right: 'right',
+      Restart: 'restart', RestartFull: 'restartFull',
+      Death: 'death', Bugpoint: 'bugpoint', Tps: 'tps'
+    };
+
+    function buttonKind(button) {
+      if (button === 2) return EventKind.Left;
+      if (button === 3) return EventKind.Right;
+      return EventKind.Jump;
+    }
+
+    class Scanner {
+      constructor(bytes, at = 0) {
+        this.b = bytes;
+        this.at = at;
+        this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      }
+      left() { return this.b.length - this.at; }
+      low(width) {
+        if (width > this.left()) throw new Error('slc replay truncated');
+        let v = 0;
+        for (let i = 0; i < width; i++) v += this.b[this.at + i] * Math.pow(256, i);
+        this.at += width;
+        return v;
+      }
+      lowBig(width) {
+        if (width > this.left()) throw new Error('slc replay truncated');
+        let v = 0n;
+        for (let i = 0; i < width; i++) v |= BigInt(this.b[this.at + i]) << BigInt(i * 8);
+        this.at += width;
+        return v;
+      }
+      real() {
+        if (this.left() < 8) throw new Error('slc replay truncated');
+        const v = this.view.getFloat64(this.at, true);
+        this.at += 8;
+        return v;
+      }
+      carve(width) {
+        if (width > this.left()) throw new Error('slc replay truncated');
+        const out = this.b.subarray(this.at, this.at + width);
+        this.at += width;
+        return out;
+      }
+    }
+
+    function lastEventFrame(events) {
+      return events.length ? events[events.length - 1].frame : 0;
+    }
+
+    function appendPlayer(events, delta, button, holding, player2) {
+      const frame = lastEventFrame(events) + delta;
+      if (button === 0) {
+        events.push({ frame, kind: EventKind.Jump, hold: true, player2, swift: true });
+        events.push({ frame, kind: EventKind.Jump, hold: false, player2, swift: true });
+        return;
+      }
+      events.push({ frame, kind: buttonKind(button), hold: holding, player2 });
+    }
+
+    function decodeCluster(atom, events, count, deltaExp, repeats) {
+      const width = 1 << deltaExp;
+      if (count > Math.floor(atom.left() / width))
+        throw new Error('slc input count exceeds data');
+
+      const cluster = [];
+      for (let i = 0; i < count; i++) {
+        if (width === 8) {
+          const raw = atom.lowBig(8);
+          cluster.push([Number(raw >> 4n), Number(raw & 0xFn)]);
+        } else {
+          const raw = atom.low(width);
+          cluster.push([Math.floor(raw / 16), raw & 0xF]);
+        }
+      }
+      if (events.length + cluster.length * repeats > MAX_EVENTS)
+        throw new Error('slc replay expands to too many events (corrupt repeat count?)');
+
+      for (let round = 0; round < repeats; round++)
+        for (const [delta, bits] of cluster)
+          appendPlayer(events, delta, (bits >> 2) & 3, (bits & 1) !== 0, (bits & 2) !== 0);
+    }
+
+    function decodeSection(atom, events) {
+      const field = atom.low(2);
+
+      switch (field >> 14) {
+        case 0: {
+          const deltaExp = (field >> 12) & 0x3;
+          const count = 1 << ((field >> 8) & 0xF);
+          return decodeCluster(atom, events, count, deltaExp, 1);
+        }
+        case 1: {
+          const deltaExp = (field >> 12) & 0x3;
+          const count = 1 << ((field >> 8) & 0xF);
+          const repeats = Math.pow(2, (field >> 3) & 0x1F);
+          return decodeCluster(atom, events, count, deltaExp, repeats);
+        }
+        case 2: {
+          const special = (field >> 10) & 0xF;
+          const deltaExp = (field >> 8) & 0x3;
+          const delta = atom.low(1 << deltaExp);
+          const frame = lastEventFrame(events) + delta;
+          if (special === 3) {
+            const tps = atom.real();
+            if (!isFinite(tps) || tps <= 0) throw new Error('slc replay has invalid tps');
+            events.push({ frame, kind: EventKind.Tps, tps });
+            return;
+          }
+          if (special === 0 || special === 1 || special === 2) {
+            const seed = atom.lowBig(8);
+            const kind = special === 0 ? EventKind.Restart
+                       : special === 1 ? EventKind.RestartFull
+                                       : EventKind.Death;
+            events.push({ frame, kind, seed });
+            events.push({ frame, kind: EventKind.Bugpoint });
+            return;
+          }
+          if (special === 4) {
+            events.push({ frame, kind: EventKind.Bugpoint });
+            return;
+          }
+          throw new Error('slc replay has unknown special');
+        }
+        default:
+          throw new Error('slc replay has unknown section id');
+      }
+    }
+
+    const MAX_EVENTS = 40000000;
+
+    function decodeActionAtom(body, events) {
+      const atom = new Scanner(body);
+      const declared = Number(atom.lowBig(8));
+
+      if (declared > MAX_EVENTS)
+        throw new Error(`slc action count is implausible (${declared})`);
+
+      while (events.length < declared) {
+        if (atom.left() < 2) {
+          events.partial = true;
+          return;
+        }
+        const before = events.length;
+        const at = atom.at;
+        try {
+          decodeSection(atom, events);
+        } catch (err) {
+          if (/truncated|exceeds data/.test(err.message) && events.length) {
+            events.length = before;
+            events.partial = true;
+            return;
+          }
+          throw err;
+        }
+        if (events.length === before && atom.at === at)
+          throw new Error('slc action atom made no progress');
+      }
+    }
+
+    function decodeV3(bytes) {
+      const rest = new Scanner(bytes, 8);
+      const metaWidth = rest.low(2);
+      if (metaWidth !== 64) throw new Error('slc replay has bad meta size');
+
+      const tps = rest.real();
+      const seed = rest.lowBig(8);
+      rest.carve(48);
+
+      const data = {
+        seed,
+        tps: (isFinite(tps) && tps > 0) ? tps : 240,
+        events: [],
+        version: 'slc3'
+      };
+
+      while (rest.left() > 1) {
+        const id = rest.low(4);
+        const packed = rest.lowBig(8);
+        let size = Number(packed & 0x00FFFFFFFFFFFFFFn);
+        let cut = false;
+        if (size > rest.left()) { size = rest.left(); cut = true; }
+        const body = rest.carve(size);
+        if (id === 1) decodeActionAtom(body, data.events);
+        if (cut) data.events.partial = true;
+        if (data.events.partial) break;
+      }
+      if (!data.events.partial && (rest.left() === 0 || rest.carve(1)[0] !== 0xCC))
+        throw new Error('slc replay has bad footer');
+      return data;
+    }
+
+    function decodeV2(bytes) {
+      const rest = new Scanner(bytes, 4);
+      const tps = rest.real();
+
+      const data = {
+        seed: 0n,
+        tps: (isFinite(tps) && tps > 0) ? tps : 240,
+        events: [],
+        version: 'slc2'
+      };
+
+      const metaWidth = Number(rest.lowBig(8));
+      if (metaWidth === 64) {
+        data.seed = rest.lowBig(8);
+        rest.carve(56);
+      } else if (metaWidth !== 0) {
+        throw new Error('slc replay has bad meta size');
+      }
+
+      const declared = Number(rest.lowBig(8));
+      const blobCount = Number(rest.lowBig(8));
+
+      const runs = [];
+      for (let i = 0; i < blobCount; i++) {
+        const width = Number(rest.lowBig(8));
+        const start = Number(rest.lowBig(8));
+        const count = Number(rest.lowBig(8));
+        if ((width !== 1 && width !== 2 && width !== 4 && width !== 8) ||
+            start > declared || count > declared - start)
+          throw new Error('slc replay has bad blob');
+        runs.push({ width, start, count });
+      }
+
+      let frame = 0;
+      for (const run of runs) {
+        if (run.count > Math.floor(rest.left() / run.width))
+          throw new Error('slc blob exceeds remaining data');
+        for (let i = 0; i < run.count; i++) {
+          let delta, button, player2, holding;
+          if (run.width === 8) {
+            const state = rest.lowBig(8);
+            delta = Number(state >> 5n);
+            button = Number((state >> 2n) & 0x7n);
+            player2 = (state & 2n) !== 0n;
+            holding = (state & 1n) !== 0n;
+          } else {
+            const state = rest.low(run.width);
+            delta = Math.floor(state / 32);
+            button = (state >> 2) & 0x7;
+            player2 = (state & 2) !== 0;
+            holding = (state & 1) !== 0;
+          }
+          frame += delta;
+          if (button === 0) continue;
+          if (button < 4) {
+            data.events.push({ frame, kind: buttonKind(button), hold: holding, player2 });
+          } else if (button < 7) {
+            const kind = button === 4 ? EventKind.Restart
+                       : button === 5 ? EventKind.RestartFull
+                                      : EventKind.Death;
+            data.events.push({ frame, kind, seed: data.seed });
+          } else {
+            const change = rest.real();
+            if (!isFinite(change) || change <= 0)
+              throw new Error('slc replay has invalid tps');
+            data.events.push({ frame, kind: EventKind.Tps, tps: change });
+          }
+        }
+      }
+
+      if (rest.left() !== 3) throw new Error('slc replay has bad footer');
+      const tail = rest.carve(3);
+      if (tail[0] !== 0x45 || tail[1] !== 0x4f || tail[2] !== 0x4d)
+        throw new Error('slc replay has bad footer');
+      return data;
+    }
+
+    function isSlc3(b) {
+      const mark = [0x53, 0x4c, 0x43, 0x33, 0x52, 0x50, 0x4c, 0x59];
+      return b.length >= 8 && mark.every((v, i) => b[i] === v);
+    }
+
+    function isSlc2(b) {
+      return b.length >= 4 && b[0] === 0x53 && b[1] === 0x49 && b[2] === 0x4c && b[3] === 0x4c;
+    }
+
+    function hexDump(buffer, limit = 96) {
+      const bytes = new Uint8Array(buffer, 0, Math.min(limit, buffer.byteLength));
+      const lines = [];
+      for (let i = 0; i < bytes.length; i += 16) {
+        const row = Array.from(bytes.subarray(i, i + 16));
+        const hex = row.map(b => b.toString(16).padStart(2, '0')).join(' ').padEnd(47, ' ');
+        const ascii = row.map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.').join('');
+        lines.push(i.toString(16).padStart(4, '0') + '  ' + hex + '  |' + ascii + '|');
+      }
+      return lines.join('\n');
+    }
+
+    function parseGrape(buffer) {
+      const bytes = new Uint8Array(buffer);
+
+      let data;
+      if (isSlc3(bytes)) data = decodeV3(bytes);
+      else if (isSlc2(bytes)) data = decodeV2(bytes);
+      else {
+        const err = new Error("not an slc replay ('SLC3RPLY' / 'SILL' signature not found)");
+        err.dump = hexDump(buffer);
+        throw err;
+      }
+
+      let tps = data.tps;
+      for (const e of data.events) {
+        if (e.kind === EventKind.Tps) { tps = e.tps; break; }
+        if (e.kind === EventKind.Jump) break;
+      }
+
+      const macro = {
+        seed: data.seed,
+        tps,
+        layout: data.version,
+        frames: [],
+        inputs: [],
+        counts: { total: data.events.length, jump: 0, other: 0 }
+      };
+
+      for (const e of data.events) {
+        if (e.kind !== EventKind.Jump) { macro.counts.other++; continue; }
+        macro.counts.jump++;
+        macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: !!e.swift });
+        macro.frames.push(e.frame);
+      }
+
+      if (!macro.frames.length) throw new Error('slc replay contains no jump inputs');
+      macro.frames = Array.from(Int32Array.from(macro.frames).sort());
+      macro.partial = !!data.events.partial;
+      return macro;
+    }
+
+    class ByteWriter {
+      constructor(capacity = 1024) {
+        this.buf = new Uint8Array(capacity);
+        this.len = 0;
+      }
+      ensure(extra) {
+        if (this.len + extra <= this.buf.length) return;
+        let size = this.buf.length * 2;
+        while (size < this.len + extra) size *= 2;
+        const next = new Uint8Array(size);
+        next.set(this.buf.subarray(0, this.len));
+        this.buf = next;
+      }
+      push(byte) {
+        this.ensure(1);
+        this.buf[this.len++] = byte;
+      }
+      writeBytes(bytes) {
+        this.ensure(bytes.length);
+        this.buf.set(bytes, this.len);
+        this.len += bytes.length;
+      }
+      writeU32(value) {
+        this.ensure(4);
+        this.buf[this.len++] = value & 0xff;
+        this.buf[this.len++] = (value >>> 8) & 0xff;
+        this.buf[this.len++] = (value >>> 16) & 0xff;
+        this.buf[this.len++] = (value >>> 24) & 0xff;
+      }
+      bytes() {
+        return this.buf.subarray(0, this.len);
+      }
+    }
+
+    function writeSection(out, id, payload) {
+      out.push(id);
+      out.writeU32(payload.length);
+      out.writeBytes(payload);
+      out.writeU32(crc32c(payload));
+    }
+
+    function writeVine(macro) {
+      const frames = Int32Array.from(macro.frames).sort();
+
+      const meta = new ByteWriter(32);
+      writeVarint(meta, macro.seed || 0n);
+      const tpsBuf = new Uint8Array(8);
+      new DataView(tpsBuf.buffer).setFloat64(0, macro.tps, true);
+      meta.writeBytes(tpsBuf);
+      writeVarint(meta, frames.length);
+      writeVarint(meta, frames.length ? frames[frames.length - 1] : 0);
+
+      const frameBytes = new ByteWriter(Math.max(64, frames.length * 2));
+      let prev = 0;
+      for (let i = 0; i < frames.length; i++) {
+        writeVarint(frameBytes, frames[i] - prev);
+        prev = frames[i];
+      }
+
+      const out = new ByteWriter(meta.len + frameBytes.len + 32);
+      out.writeBytes(new Uint8Array([
+        0x56, 0x49, 0x4e, 0x45,
+        1, 0,
+        2, 0
+      ]));
+      writeSection(out, 1, meta.bytes());
+      writeSection(out, 2, frameBytes.bytes());
+
+      return out.bytes().slice();
+    }
+
+    let currentMacro = null;
+    let currentFileName = '';
+    let selectedFile = null;
+
+    const fileInput = document.getElementById('fileInput');
+    const forceBtn = document.getElementById('forceBtn');
+    const outputArea = document.getElementById('output');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const vineBtn = document.getElementById('vineBtn');
+    const statusDiv = document.getElementById('status');
+    const errorDiv = document.getElementById('error');
+    const noteDiv = document.getElementById('note');
+    const formatRadios = document.getElementsByName('format');
+
+    function saveBlob(data, name, mime) {
+      const blob = new Blob([data], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    const DISPLAY_LIMIT = 200000;
+    const DISPLAY_LIMIT_OVERRIDE = { value: false };
+
+    function formatText() {
+      if (!currentMacro) return '';
+      const selectedFormat = Array.from(formatRadios).find(r => r.checked)?.value || 'detailed';
+      const frames = currentMacro.frames;
+      const clipped = !DISPLAY_LIMIT_OVERRIDE.value && frames.length > DISPLAY_LIMIT;
+      const shown = clipped ? frames.slice(0, DISPLAY_LIMIT) : frames;
+      const clipNote = clipped
+        ? [`... ${frames.length - DISPLAY_LIMIT} more frames hidden (preview limit) - use download or convert for the full data`]
+        : [];
+
+      if (selectedFormat === 'frames') {
+        return shown.join('\n') + (clipped ? '\n' + clipNote[0] : '');
+      } else if (selectedFormat === 'json') {
+        return JSON.stringify({
+          fileName: currentFileName,
+          seed: currentMacro.seed.toString(),
+          tps: currentMacro.tps,
+          frameCount: frames.length,
+          truncatedPreview: clipped || undefined,
+          frames: shown
+        }, null, 2);
+      } else {
+        const lines = [
+          `file: ${currentFileName}`,
+          `source: ${currentMacro.source || 'vine'}`,
+          `seed: ${currentMacro.seed.toString()}`,
+          `TPS: ${currentMacro.tps}`,
+          `frames length: ${frames.length}`,
+          `jump events: ${currentMacro.counts ? currentMacro.counts.jump : frames.length}` +
+            (currentMacro.counts ? `, skipped: ${currentMacro.counts.other}` : ''),
+          ...(currentMacro.partial ? ['WARNING: truncated action data'] : []),
+          '----------------------------------------',
+          'frames:',
+          ...shown.map(f => f.toString()),
+          ...clipNote
+        ];
+        return lines.join('\n');
+      }
+    }
+
+    function updateOutput() {
+      if (!currentMacro) return;
+      const text = formatText();
+      outputArea.value = text;
+      downloadBtn.disabled = false;
+      copyBtn.disabled = false;
+      vineBtn.disabled = false;
+    }
+
+    Array.from(formatRadios).forEach(radio => {
+      radio.addEventListener('change', updateOutput);
+    });
+
+    function isVine(buffer) {
+      const b = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength));
+      return b.length === 4 && b[0] === 0x56 && b[1] === 0x49 && b[2] === 0x4e && b[3] === 0x45;
+    }
+
+    async function processFile(file) {
+      if (!file) {
+        errorDiv.textContent = 'No file selected. Please choose or paste a file first.';
+        return;
+      }
+
+      selectedFile = file;
+      errorDiv.textContent = '';
+      statusDiv.textContent = '';
+      noteDiv.textContent = '';
+      outputArea.value = '';
+      downloadBtn.disabled = true;
+      copyBtn.disabled = true;
+      vineBtn.disabled = true;
+      currentMacro = null;
+
+      currentFileName = file.name || 'unnamed.vine';
+      statusDiv.textContent = `parsing "${currentFileName}" (${file.size} bytes)...`;
+
+      try {
+        const buffer = await file.arrayBuffer();
+
+        if (isVine(buffer)) {
+          currentMacro = parseVine(buffer);
+          currentMacro.source = 'vine';
+        } else {
+          currentMacro = parseGrape(buffer);
+          currentMacro.source = 'grape';
+          const c = currentMacro.counts;
+          noteDiv.textContent =
+            `.grape (${currentMacro.layout}) detected: ${c.jump} jump events kept, ${c.other} non-jump events ` +
+            '(left/right/restart/death/tps) skipped. .vine stores frames only, so hold state and ' +
+            'player 2 flags are dropped on conversion.' +
+            (currentMacro.partial
+              ? ' WARNING: the action data ended before the declared count, so this macro is truncated.'
+              : '');
+        }
+
+        statusDiv.textContent =
+          `success: ${currentFileName} | format: ${currentMacro.source}` +
+          (currentMacro.layout ? ` (${currentMacro.layout})` : '') +
+          ` | frames: ${currentMacro.frames.length} | TPS: ${currentMacro.tps}`;
+        updateOutput();
+      } catch (err) {
+        errorDiv.textContent = 'error: ' + err.message;
+        statusDiv.textContent = '';
+        if (err.dump) {
+          noteDiv.textContent = 'first bytes of the file are shown below — send them if you want the layout identified.';
+          outputArea.value = `file: ${currentFileName} (${file.size} bytes)\n\n${err.dump}`;
+          copyBtn.disabled = false;
+        }
+      }
+    }
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        processFile(file);
+      }
+    });
+
+    forceBtn.addEventListener('click', () => {
+      const file = fileInput.files[0] || selectedFile;
+      processFile(file);
+    });
+
+    window.addEventListener('paste', (e) => {
+      if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        processFile(file);
+      }
+    });
+
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        processFile(file);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!currentMacro) return;
+      const saved = DISPLAY_LIMIT_OVERRIDE.value;
+      DISPLAY_LIMIT_OVERRIDE.value = true;
+      const text = formatText();
+      DISPLAY_LIMIT_OVERRIDE.value = saved;
+      if (!text) return;
+      const baseName = currentFileName ? currentFileName.replace(/\.[^/.]+$/, '') : 'parsed_macro';
+      saveBlob(text, `${baseName}.txt`, 'text/plain;charset=utf-8');
+    });
+
+    vineBtn.addEventListener('click', () => {
+      if (!currentMacro) return;
+      try {
+        const data = writeVine(currentMacro);
+        const baseName = currentFileName ? currentFileName.replace(/\.[^/.]+$/, '') : 'converted_macro';
+        saveBlob(data, `${baseName}.vine`, 'application/octet-stream');
+        statusDiv.textContent = `converted: ${baseName}.vine | frames: ${currentMacro.frames.length} | TPS: ${currentMacro.tps}`;
+      } catch (err) {
+        errorDiv.textContent = 'convert error: ' + err.message;
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      if (!outputArea.value) return;
+      try {
+        await navigator.clipboard.writeText(outputArea.value);
+        const prevText = copyBtn.textContent;
+        copyBtn.textContent = 'copied!';
+        setTimeout(() => { copyBtn.textContent = prevText; }, 2000);
+      } catch (err) {
+        outputArea.select();
+        document.execCommand('copy');
+      }
+    });
+  </script>
+</body>
+</html>
