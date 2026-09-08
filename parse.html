@@ -117,36 +117,113 @@
       return (crc ^ 0xffffffff) >>> 0;
     }
 
+    const WIRE_TO_KIND = ['jump', 'left', 'right', 'restart', 'restartFull', 'death', 'tps', 'bugpoint'];
+    const KIND_TO_WIRE = {
+      jump: 0, left: 1, right: 2, restart: 3, restartFull: 4, death: 5, tps: 6, bugpoint: 7
+    };
+    const TAG_KIND_MASK = 0x07;
+    const TAG_HOLDING = 0x08;
+    const TAG_PLAYER2 = 0x10;
+    const TAG_SWIFT = 0x20;
+    const TAG_SEED = 0x40;
+    const TAG_TPS = 0x80;
+    const VINE_VERSION = 1;
+    const VINE_SECTIONS = 3;
+    const VINE_MAX_EVENTS = 10000000;
+
+    function wireCarriesSeed(code) { return code === 3 || code === 4 || code === 5; }
+    function wireCarriesTps(code) { return code === 6; }
+
     function parseVine(buffer) {
       const bytes = new Uint8Array(buffer);
       const view = new DataView(buffer);
-      if (bytes.length < 8 || String.fromCharCode(...bytes.slice(0, 4)) !== 'VINE')
-        throw new Error("incorrect format, '.vine' signature not found");
+      if (bytes.length < 8) throw new Error('file too small');
+      if (bytes[0] !== 0x56 || bytes[1] !== 0x49 || bytes[2] !== 0x4e || bytes[3] !== 0x45)
+        throw new Error('not a vine inputs file');
 
-      const pos = { i: 8 };
-      const macro = { seed: 0n, tps: 240, frames: [] };
+      const version = bytes[4] | (bytes[5] << 8);
+      if (version !== VINE_VERSION) throw new Error('unsupported vine version');
+      const sections = bytes[6] | (bytes[7] << 8);
+      if (sections !== VINE_SECTIONS) throw new Error('bad section layout');
 
-      for (let i = 0; i < 3; i++) {
-        if (pos.i >= bytes.length) break;
-        const id = bytes[pos.i++];
-        const length = view.getUint32(pos.i, true);
-        pos.i += 4;
+      const payloads = [];
+      let pos = 8;
+      for (let index = 0; index < VINE_SECTIONS; index++) {
+        if (bytes.length - pos < 9) throw new Error('truncated section header');
+        if (bytes[pos] !== index + 1) throw new Error('section out of order');
+        const length = view.getUint32(pos + 1, true);
+        if (length > bytes.length - pos - 9) throw new Error('truncated section body');
+        const sectionEnd = pos + 5 + length + 4;
+        if (sectionEnd > bytes.length) throw new Error('truncated section body');
+        const stored = view.getUint32(pos + 5 + length, true);
+        const actual = crc32c(bytes.subarray(pos, pos + 5 + length));
+        if (stored !== actual) throw new Error(`checksum mismatch in section ${index + 1}`);
+        payloads.push(bytes.subarray(pos + 5, pos + 5 + length));
+        pos = sectionEnd;
+      }
+      if (pos !== bytes.length) throw new Error('trailing data after sections');
 
-        const payload = bytes.subarray(pos.i, pos.i + length);
-        pos.i += length + 4;
+      const meta = { i: 0 };
+      const seed = readVarint(payloads[0], meta);
+      const tpsBits = payloads[0].subarray(meta.i, meta.i + 8);
+      if (tpsBits.length < 8) throw new Error('section ran out of bytes');
+      const tps = new DataView(tpsBits.buffer, tpsBits.byteOffset, 8).getFloat64(0, true);
+      meta.i += 8;
+      const count = Number(readVarint(payloads[0], meta));
+      const lastFrame = Number(readVarint(payloads[0], meta));
+      if (meta.i !== payloads[0].length) throw new Error('malformed meta section');
+      if (count > VINE_MAX_EVENTS) throw new Error('too many events');
+      if (!isFinite(tps) || tps <= 0) throw new Error('invalid tps');
+      if (count > payloads[1].length || count > payloads[2].length)
+        throw new Error('event count exceeds section data');
 
-        if (id === 1) {
-          const p = { i: 0 };
-          macro.seed = readVarint(payload, p);
-          macro.tps = new DataView(payload.buffer, payload.byteOffset + p.i, 8).getFloat64(0, true);
-        } else if (id === 2) {
-          const p = { i: 0 };
-          let frame = 0n;
-          while (p.i < payload.length) {
-            frame += readVarint(payload, p);
-            macro.frames.push(Number(frame));
-          }
+      const events = new Array(count);
+      const fr = { i: 0 };
+      let frame = 0;
+      for (let i = 0; i < count; i++) {
+        frame += Number(readVarint(payloads[1], fr));
+        events[i] = { frame, kind: 'jump', hold: false, player2: false, swift: false, seed: 0n, tps: 240 };
+      }
+      if (fr.i !== payloads[1].length) throw new Error('malformed frame section');
+      if (frame !== lastFrame) throw new Error('last frame mismatch');
+
+      const rec = { i: 0 };
+      for (let i = 0; i < count; i++) {
+        if (rec.i >= payloads[2].length) throw new Error('section ran out of bytes');
+        const tag = payloads[2][rec.i++];
+        const code = tag & TAG_KIND_MASK;
+        const wantsSeed = (tag & TAG_SEED) !== 0;
+        const wantsTps = (tag & TAG_TPS) !== 0;
+        if (wantsSeed !== wireCarriesSeed(code)) throw new Error('seed flag mismatch');
+        if (wantsTps !== wireCarriesTps(code)) throw new Error('tps flag mismatch');
+
+        const event = events[i];
+        event.kind = WIRE_TO_KIND[code];
+        event.hold = (tag & TAG_HOLDING) !== 0;
+        event.player2 = (tag & TAG_PLAYER2) !== 0;
+        event.swift = (tag & TAG_SWIFT) !== 0;
+        if (wantsSeed) event.seed = readVarint(payloads[2], rec);
+        if (wantsTps) {
+          const bits = payloads[2].subarray(rec.i, rec.i + 8);
+          if (bits.length < 8) throw new Error('section ran out of bytes');
+          event.tps = new DataView(bits.buffer, bits.byteOffset, 8).getFloat64(0, true);
+          rec.i += 8;
+          if (!isFinite(event.tps) || event.tps <= 0) throw new Error('invalid tps event');
         }
+      }
+      if (rec.i !== payloads[2].length) throw new Error('malformed record section');
+
+      const macro = {
+        seed, tps, events,
+        frames: events.map(e => e.frame),
+        inputs: [],
+        counts: { total: events.length, jump: 0, other: 0 }
+      };
+      for (const e of events) {
+        if (e.kind === 'jump') {
+          macro.counts.jump++;
+          macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: e.swift });
+        } else macro.counts.other++;
       }
       return macro;
     }
@@ -460,24 +537,32 @@
         if (e.kind === EventKind.Jump) break;
       }
 
+      const events = data.events.slice();
+      events.sort((a, b) => a.frame - b.frame);
+
       const macro = {
         seed: data.seed,
         tps,
         layout: data.version,
-        frames: [],
+        events,
+        frames: events.map(e => e.frame),
         inputs: [],
-        counts: { total: data.events.length, jump: 0, other: 0 }
+        counts: { total: events.length, jump: 0, other: 0 }
       };
 
-      for (const e of data.events) {
-        if (e.kind !== EventKind.Jump) { macro.counts.other++; continue; }
-        macro.counts.jump++;
-        macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: !!e.swift });
-        macro.frames.push(e.frame);
+      for (const e of events) {
+        e.hold = !!e.hold;
+        e.player2 = !!e.player2;
+        e.swift = !!e.swift;
+        e.seed = e.seed || 0n;
+        e.tps = e.tps || 240;
+        if (e.kind === EventKind.Jump) {
+          macro.counts.jump++;
+          macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: e.swift });
+        } else macro.counts.other++;
       }
 
-      if (!macro.frames.length) throw new Error('slc replay contains no jump inputs');
-      macro.frames = Array.from(Int32Array.from(macro.frames).sort());
+      if (!events.length) throw new Error('slc replay contains no events');
       macro.partial = !!data.events.partial;
       return macro;
     }
@@ -504,6 +589,11 @@
         this.buf.set(bytes, this.len);
         this.len += bytes.length;
       }
+      writeU16(value) {
+        this.ensure(2);
+        this.buf[this.len++] = value & 0xff;
+        this.buf[this.len++] = (value >>> 8) & 0xff;
+      }
       writeU32(value) {
         this.ensure(4);
         this.buf[this.len++] = value & 0xff;
@@ -511,45 +601,62 @@
         this.buf[this.len++] = (value >>> 16) & 0xff;
         this.buf[this.len++] = (value >>> 24) & 0xff;
       }
-      bytes() {
-        return this.buf.subarray(0, this.len);
+      writeF64(value) {
+        const b = new Uint8Array(8);
+        new DataView(b.buffer).setFloat64(0, value, true);
+        this.writeBytes(b);
       }
+      bytes() { return this.buf.subarray(0, this.len); }
     }
 
-    function writeSection(out, id, payload) {
+    function appendSection(out, id, payload) {
+      const start = out.len;
       out.push(id);
       out.writeU32(payload.length);
       out.writeBytes(payload);
-      out.writeU32(crc32c(payload));
+      out.writeU32(crc32c(out.bytes().subarray(start, out.len)));
     }
 
     function writeVine(macro) {
-      const frames = Int32Array.from(macro.frames).sort();
+      const events = macro.events;
+      if (!events || !events.length) throw new Error('macro has no events to write');
+      if (events.length > VINE_MAX_EVENTS) throw new Error('inputs exceed the event limit');
 
       const meta = new ByteWriter(32);
       writeVarint(meta, macro.seed || 0n);
-      const tpsBuf = new Uint8Array(8);
-      new DataView(tpsBuf.buffer).setFloat64(0, macro.tps, true);
-      meta.writeBytes(tpsBuf);
-      writeVarint(meta, frames.length);
-      writeVarint(meta, frames.length ? frames[frames.length - 1] : 0);
+      meta.writeF64(macro.tps);
+      writeVarint(meta, events.length);
+      writeVarint(meta, events[events.length - 1].frame);
 
-      const frameBytes = new ByteWriter(Math.max(64, frames.length * 2));
-      let prev = 0;
-      for (let i = 0; i < frames.length; i++) {
-        writeVarint(frameBytes, frames[i] - prev);
-        prev = frames[i];
+      const frames = new ByteWriter(Math.max(64, events.length * 3));
+      let previous = 0;
+      for (const event of events) {
+        if (event.frame < previous) throw new Error('input events are not sorted');
+        writeVarint(frames, event.frame - previous);
+        previous = event.frame;
       }
 
-      const out = new ByteWriter(meta.len + frameBytes.len + 32);
-      out.writeBytes(new Uint8Array([
-        0x56, 0x49, 0x4e, 0x45,
-        1, 0,
-        2, 0
-      ]));
-      writeSection(out, 1, meta.bytes());
-      writeSection(out, 2, frameBytes.bytes());
+      const records = new ByteWriter(Math.max(64, events.length * 4));
+      for (const event of events) {
+        const code = KIND_TO_WIRE[event.kind] ?? 7;
+        let tag = code;
+        if (event.hold) tag |= TAG_HOLDING;
+        if (event.player2) tag |= TAG_PLAYER2;
+        if (event.swift) tag |= TAG_SWIFT;
+        if (wireCarriesSeed(code)) tag |= TAG_SEED;
+        if (wireCarriesTps(code)) tag |= TAG_TPS;
+        records.push(tag);
+        if (wireCarriesSeed(code)) writeVarint(records, event.seed || 0n);
+        if (wireCarriesTps(code)) records.writeF64(event.tps);
+      }
 
+      const out = new ByteWriter(8 + 27 + meta.len + frames.len + records.len);
+      out.writeBytes(new Uint8Array([0x56, 0x49, 0x4e, 0x45]));
+      out.writeU16(VINE_VERSION);
+      out.writeU16(VINE_SECTIONS);
+      appendSection(out, 1, meta.bytes());
+      appendSection(out, 2, frames.bytes());
+      appendSection(out, 3, records.bytes());
       return out.bytes().slice();
     }
 
@@ -671,9 +778,8 @@
           currentMacro.source = 'grape';
           const c = currentMacro.counts;
           noteDiv.textContent =
-            `.grape (${currentMacro.layout}) detected: ${c.jump} jump events kept, ${c.other} non-jump events ` +
-            '(left/right/restart/death/tps) skipped. .vine stores frames only, so hold state and ' +
-            'player 2 flags are dropped on conversion.' +
+            `.grape (${currentMacro.layout}) detected: ${c.total} events (${c.jump} jump, ${c.other} other). ` +
+            'Conversion keeps hold state, player 2, swift clicks, seeds and tps changes.' +
             (currentMacro.partial
               ? ' WARNING: the action data ended before the declared count, so this macro is truncated.'
               : '');
