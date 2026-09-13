@@ -70,6 +70,7 @@
     <button id="downloadBtn" disabled>download (.txt)</button>
     <button id="copyBtn" disabled>copy</button>
     <button id="vineBtn" disabled>convert &rarr; .vine</button>
+    <label><input type="checkbox" id="platformerCheckbox"> platformer mode</label>
   </div>
 
   <div id="status" class="status"></div>
@@ -127,7 +128,8 @@
     const TAG_SWIFT = 0x20;
     const TAG_SEED = 0x40;
     const TAG_TPS = 0x80;
-    const VINE_VERSION = 1;
+    const VINE_VERSION_V1 = 1;
+    const VINE_VERSION_V3 = 3;
     const VINE_SECTIONS = 3;
     const VINE_MAX_EVENTS = 10000000;
 
@@ -136,13 +138,18 @@
 
     function parseVine(buffer) {
       const bytes = new Uint8Array(buffer);
-      const view = new DataView(buffer);
       if (bytes.length < 8) throw new Error('file too small');
       if (bytes[0] !== 0x56 || bytes[1] !== 0x49 || bytes[2] !== 0x4e || bytes[3] !== 0x45)
-        throw new Error('not a vine inputs file');
+        throw new Error('not a .vine macro');
 
-      const version = bytes[4] | (bytes[5] << 8);
-      if (version !== VINE_VERSION) throw new Error('unsupported vine version');
+      const view = new DataView(buffer);
+      const version = view.getUint16(4, true);
+      if (version === VINE_VERSION_V3) return parseVineV3(bytes, view);
+      if (version === VINE_VERSION_V1) return parseVineV1(bytes, view);
+      throw new Error(`unsupported .vine version ${version}`);
+    }
+
+    function parseVineV1(bytes, view) {
       const sections = bytes[6] | (bytes[7] << 8);
       if (sections !== VINE_SECTIONS) throw new Error('bad section layout');
 
@@ -214,7 +221,7 @@
       if (rec.i !== payloads[2].length) throw new Error('malformed record section');
 
       const macro = {
-        seed, tps, events,
+        seed, tps, events, layout: 'vine1', platformer: false,
         frames: events.map(e => e.frame),
         inputs: [],
         counts: { total: events.length, jump: 0, other: 0 }
@@ -223,6 +230,103 @@
         if (e.kind === 'jump') {
           macro.counts.jump++;
           macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: e.swift });
+        } else macro.counts.other++;
+      }
+      return macro;
+    }
+
+    class BitReader {
+      constructor(bytes) { this.bytes = bytes; this.pos = 0; this.bits = 0n; this.count = 0; }
+      get(width) {
+        while (this.count < width) {
+          if (this.pos >= this.bytes.length) throw new Error('truncated macro');
+          this.bits |= BigInt(this.bytes[this.pos++]) << BigInt(this.count);
+          this.count += 8;
+        }
+        const value = this.bits & ((1n << BigInt(width)) - 1n);
+        this.bits >>= BigInt(width);
+        this.count -= width;
+        return value;
+      }
+      varint() {
+        let value = 0n, shift = 0n;
+        for (;;) {
+          const byte = this.get(8);
+          value |= (byte & 0x7fn) << shift;
+          if ((byte & 0x80n) === 0n) return value;
+          shift += 7n;
+        }
+      }
+    }
+
+    function parseVineV3(bytes, view) {
+      const section = [];
+      let pos = 8;
+      for (let i = 0; i < 3; i++) {
+        if (bytes.length - pos < 5) throw new Error('truncated section header');
+        pos += 1;
+        const length = view.getUint32(pos, true);
+        pos += 4;
+        if (length > bytes.length - pos) throw new Error('truncated section body');
+        section.push(bytes.subarray(pos, pos + length));
+        pos += length + 4;
+        if (pos > bytes.length) throw new Error('truncated section body');
+      }
+
+      const meta = { i: 0 };
+      if (section[0].length < 8) throw new Error('malformed meta section');
+      const seed = readVarint(section[0], meta);
+      if (section[0].length - meta.i < 8) throw new Error('malformed meta section');
+      const tps = new DataView(section[0].buffer, section[0].byteOffset + meta.i, 8).getFloat64(0, true);
+      meta.i += 8;
+      const count = Number(readVarint(section[0], meta));
+      if (count > VINE_MAX_EVENTS) throw new Error('too many events');
+      readVarint(section[0], meta);
+      const platformer = meta.i < section[0].length ? (section[0][meta.i] & 0x01) !== 0 : false;
+      if (!isFinite(tps) || tps <= 0) throw new Error('invalid tps');
+
+      const events = new Array(count);
+      const frames = new BitReader(section[1]);
+      let frame = 0n;
+      for (let i = 0; i < count; i++) {
+        let delta = frames.get(6);
+        if (delta === 63n) delta = frames.varint();
+        frame += delta;
+        events[i] = {
+          frame: Number(frame), kind: 'jump', hold: false,
+          player2: false, swift: false, seed: 0n, tps: 240
+        };
+      }
+
+      const records = new BitReader(section[2]);
+      let tag = 0;
+      for (let i = 0; i < count; i++) {
+        tag = records.get(1) === 1n ? (tag ^ 0x08) : Number(records.get(6));
+        const event = events[i];
+        const code = tag & TAG_KIND_MASK;
+        event.kind = WIRE_TO_KIND[code] || 'bugpoint';
+        event.hold = (tag & TAG_HOLDING) !== 0;
+        event.player2 = (tag & TAG_PLAYER2) !== 0;
+        if (wireCarriesSeed(code)) event.seed = records.varint();
+        if (wireCarriesTps(code)) {
+          const bits = records.get(32) | (records.get(32) << 32n);
+          const tpsView = new DataView(new ArrayBuffer(8));
+          tpsView.setBigUint64(0, bits, true);
+          event.tps = tpsView.getFloat64(0, true);
+          if (!isFinite(event.tps) || event.tps <= 0) throw new Error('invalid tps event');
+        }
+      }
+
+      const macro = {
+        seed, tps, events, layout: 'vine3', platformer,
+        frames: events.map(e => e.frame),
+        inputs: [],
+        counts: { total: events.length, jump: 0, other: 0 }
+      };
+      for (const e of events) {
+        if (e.kind === 'jump') {
+          macro.counts.jump++;
+          macro.inputs.push({ frame: e.frame, hold: e.hold, player2: e.player2, swift: false });
         } else macro.counts.other++;
       }
       return macro;
@@ -617,6 +721,42 @@
       out.writeU32(crc32c(out.bytes().subarray(start, out.len)));
     }
 
+    class BitWriter {
+      constructor(capacity = 1024) {
+        this.out = new ByteWriter(capacity);
+        this.acc = 0n;
+        this.count = 0;
+      }
+      put(value, width) {
+        value = BigInt(value) & ((1n << BigInt(width)) - 1n);
+        this.acc |= value << BigInt(this.count);
+        this.count += width;
+        while (this.count >= 8) {
+          this.out.push(Number(this.acc & 0xffn));
+          this.acc >>= 8n;
+          this.count -= 8;
+        }
+      }
+      varint(value) {
+        value = BigInt(value);
+        for (;;) {
+          let byte = value & 0x7fn;
+          value >>= 7n;
+          if (value !== 0n) byte |= 0x80n;
+          this.put(byte, 8);
+          if (value === 0n) break;
+        }
+      }
+      bytes() {
+        if (this.count > 0) {
+          this.out.push(Number(this.acc & 0xffn));
+          this.acc = 0n;
+          this.count = 0;
+        }
+        return this.out.bytes();
+      }
+    }
+
     function writeVine(macro) {
       const events = macro.events;
       if (!events || !events.length) throw new Error('macro has no events to write');
@@ -627,32 +767,51 @@
       meta.writeF64(macro.tps);
       writeVarint(meta, events.length);
       writeVarint(meta, events[events.length - 1].frame);
+      meta.push(macro.platformer ? 0x01 : 0x00);
 
-      const frames = new ByteWriter(Math.max(64, events.length * 3));
+      const frames = new BitWriter(Math.max(64, events.length));
       let previous = 0;
       for (const event of events) {
         if (event.frame < previous) throw new Error('input events are not sorted');
-        writeVarint(frames, event.frame - previous);
+        const delta = event.frame - previous;
         previous = event.frame;
+        if (delta < 63) {
+          frames.put(delta, 6);
+        } else {
+          frames.put(63, 6);
+          frames.varint(delta);
+        }
       }
 
-      const records = new ByteWriter(Math.max(64, events.length * 4));
+      const records = new BitWriter(Math.max(64, events.length));
+      let prevTag = 0;
       for (const event of events) {
         const code = KIND_TO_WIRE[event.kind] ?? 7;
         let tag = code;
         if (event.hold) tag |= TAG_HOLDING;
         if (event.player2) tag |= TAG_PLAYER2;
-        if (event.swift) tag |= TAG_SWIFT;
-        if (wireCarriesSeed(code)) tag |= TAG_SEED;
-        if (wireCarriesTps(code)) tag |= TAG_TPS;
-        records.push(tag);
-        if (wireCarriesSeed(code)) writeVarint(records, event.seed || 0n);
-        if (wireCarriesTps(code)) records.writeF64(event.tps);
+
+        if (tag === (prevTag ^ 0x08)) {
+          records.put(1, 1);
+        } else {
+          records.put(0, 1);
+          records.put(tag, 6);
+        }
+        prevTag = tag;
+
+        if (wireCarriesSeed(code)) records.varint(event.seed || 0n);
+        if (wireCarriesTps(code)) {
+          const bits = new DataView(new ArrayBuffer(8));
+          bits.setFloat64(0, event.tps, true);
+          const raw = bits.getBigUint64(0, true);
+          records.put(raw & 0xffffffffn, 32);
+          records.put(raw >> 32n, 32);
+        }
       }
 
-      const out = new ByteWriter(8 + 27 + meta.len + frames.len + records.len);
+      const out = new ByteWriter(8 + 27 + meta.len + Math.ceil(events.length / 4) + Math.ceil(events.length / 2));
       out.writeBytes(new Uint8Array([0x56, 0x49, 0x4e, 0x45]));
-      out.writeU16(VINE_VERSION);
+      out.writeU16(VINE_VERSION_V3);
       out.writeU16(VINE_SECTIONS);
       appendSection(out, 1, meta.bytes());
       appendSection(out, 2, frames.bytes());
@@ -705,6 +864,9 @@
       } else if (selectedFormat === 'json') {
         return JSON.stringify({
           fileName: currentFileName,
+          layout: currentMacro.layout,
+          platformer: currentMacro.layout && currentMacro.layout.startsWith('vine')
+            ? !!currentMacro.platformer : undefined,
           seed: currentMacro.seed.toString(),
           tps: currentMacro.tps,
           frameCount: frames.length,
@@ -714,9 +876,11 @@
       } else {
         const lines = [
           `file: ${currentFileName}`,
-          `source: ${currentMacro.source || 'vine'}`,
+          `source: ${currentMacro.source || 'vine'}${currentMacro.layout ? ` (${currentMacro.layout})` : ''}`,
           `seed: ${currentMacro.seed.toString()}`,
           `TPS: ${currentMacro.tps}`,
+          ...(currentMacro.layout && currentMacro.layout.startsWith('vine')
+            ? [`platformer: ${!!currentMacro.platformer}`] : []),
           `frames length: ${frames.length}`,
           `jump events: ${currentMacro.counts ? currentMacro.counts.jump : frames.length}` +
             (currentMacro.counts ? `, skipped: ${currentMacro.counts.other}` : ''),
@@ -773,13 +937,15 @@
         if (isVine(buffer)) {
           currentMacro = parseVine(buffer);
           currentMacro.source = 'vine';
+          platformerCheckbox.checked = !!currentMacro.platformer;
         } else {
           currentMacro = parseGrape(buffer);
           currentMacro.source = 'grape';
           const c = currentMacro.counts;
           noteDiv.textContent =
             `.grape (${currentMacro.layout}) detected: ${c.total} events (${c.jump} jump, ${c.other} other). ` +
-            'Conversion keeps hold state, player 2, swift clicks, seeds and tps changes.' +
+            'Conversion keeps hold state, player 2, seeds and tps changes. Swift click pairs ' +
+            'are written as two ordinary jump events (press+release), since .vine v3 has no separate swift flag.' +
             (currentMacro.partial
               ? ' WARNING: the action data ended before the declared count, so this macro is truncated.'
               : '');
@@ -840,13 +1006,18 @@
       saveBlob(text, `${baseName}.txt`, 'text/plain;charset=utf-8');
     });
 
+    const platformerCheckbox = document.getElementById('platformerCheckbox');
+
     vineBtn.addEventListener('click', () => {
       if (!currentMacro) return;
       try {
+        currentMacro.platformer = platformerCheckbox.checked;
         const data = writeVine(currentMacro);
         const baseName = currentFileName ? currentFileName.replace(/\.[^/.]+$/, '') : 'converted_macro';
         saveBlob(data, `${baseName}.vine`, 'application/octet-stream');
-        statusDiv.textContent = `converted: ${baseName}.vine | frames: ${currentMacro.frames.length} | TPS: ${currentMacro.tps}`;
+        statusDiv.textContent =
+          `converted: ${baseName}.vine (v3) | frames: ${currentMacro.frames.length} | ` +
+          `TPS: ${currentMacro.tps} | platformer: ${currentMacro.platformer}`;
       } catch (err) {
         errorDiv.textContent = 'convert error: ' + err.message;
       }
